@@ -3,8 +3,6 @@
 //
 
 #include "handshake.h"
-#include "../selector.h"
-#include "../buffer.h"
 #include "../socks5/socks5.h"
 #include "handshake_parser.h"
 
