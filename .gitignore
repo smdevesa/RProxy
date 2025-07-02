@@ -1,0 +1,21 @@
+# Binarios y objetos
+/bin/
+/obj/
+
+# Archivos de compilación
+*.o
+*.obj
+*.exe
+*.out
+
+# Archivos de editor comunes
+.vscode/
+.idea/
+.DS_Store/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
