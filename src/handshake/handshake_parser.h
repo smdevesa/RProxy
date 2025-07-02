@@ -6,6 +6,8 @@
 #define RPROXY_HANDSHAKE_PARSER_H
 
 #include <stddef.h>
+#include <stdbool.h>
+#include "../buffer.h"
 
 enum auth_methods {
     NO_AUTH = 0x00,
@@ -38,11 +40,42 @@ void handshake_parser_init(handshake_parser_t *parser);
  * Parses the given byte array as part of the handshake process.
  *
  * @param parser Pointer to the handshake parser.
- * @param data Pointer to the byte array containing the handshake data.
+ * @param buf Pointer to the buffer containing the data to parse.
  * @return Parser state after parsing the data.
  */
-enum handshake_parser_state handshake_parser_parse(handshake_parser_t *parser, const unsigned char *data, size_t length);
+enum handshake_parser_state handshake_parser_parse(handshake_parser_t *parser, struct buffer *buf );
 
+/**
+ * Verifica si el parser ha completado el proceso de handshake.
+ *
+ * @param parser Puntero al parser de handshake.
+ * @return 1 si el parser ha terminado, 0 en caso contrario.
+ */
+bool handshake_parser_is_done(const handshake_parser_t *parser);
 
+/**
+ * Verifica si ha ocurrido un error durante el parsing.
+ *
+ * @param parser Puntero al parser de handshake.
+ * @return 1 si ha ocurrido un error, 0 en caso contrario.
+ */
+bool handshake_parser_has_error(const handshake_parser_t *parser);
+
+/**
+ * Obtiene el método de autenticación seleccionado.
+ *
+ * @param parser Puntero al parser de handshake.
+ * @return El método de autenticación seleccionado.
+ */
+enum auth_methods handshake_parser_get_auth_method(const handshake_parser_t *parser);
+
+/**
+ * Construye la respuesta del handshake según el RFC1928.
+ *
+ * @param parser Puntero al parser de handshake.
+ * @param buf Buffer donde se escribirá la respuesta.
+ * @return Número de bytes escritos en el buffer.
+ */
+bool handshake_parser_build_response(const handshake_parser_t *parser, struct buffer *buf);
 
 #endif //RPROXY_HANDSHAKE_PARSER_H
