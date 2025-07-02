@@ -16,17 +16,17 @@ enum auth_methods {
 };
 
 enum handshake_parser_state {
-    HANDSHAKE_PARSER_VERSION = 0, // Reading the version byte (must be 0x05)
-    HANDSHAKE_PARSER_NMETHODS, // Reading the number of authentication methods
-    HANDSHAKE_PARSER_METHODS, // Reading the authentication methods
-    HANDSHAKE_PARSER_DONE, // Handshake parsing is done
-    HANDSHAKE_PARSER_ERROR // An error occurred during parsing
+    HANDSHAKE_PARSER_VERSION = 0,   // Reading the version byte (must be 0x05)
+    HANDSHAKE_PARSER_NMETHODS,      // Reading the number of authentication methods
+    HANDSHAKE_PARSER_METHODS,       // Reading the authentication methods
+    HANDSHAKE_PARSER_DONE,          // Handshake parsing is done
+    HANDSHAKE_PARSER_ERROR          // An error occurred during parsing
 };
 
 typedef struct handshake_parser {
     enum handshake_parser_state state; // Current state of the handshake parser
     enum auth_methods selected_method; // The selected authentication method
-    size_t methods_count; // Number of authentication methods received
+    size_t methods_count;              // Number of authentication methods received
 } handshake_parser_t;
 
 /**

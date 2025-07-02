@@ -1,5 +1,5 @@
 #include "handshake_parser.h"
-#include "../parser.h"
+#include <stdint.h>
 
 #define SOCKS5_VERSION 0x05
 
