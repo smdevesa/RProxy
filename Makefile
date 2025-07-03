@@ -1,6 +1,6 @@
 # Compilador y flags
 CC = gcc
-CFLAGS = -Wall -Wextra -g -D_GNU_SOURCE
+CFLAGS = -D_GNU_SOURCE
 LDFLAGS = -lpthread
 
 # Directorios

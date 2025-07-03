@@ -37,10 +37,10 @@ enum socks5_state {
     AUTH_READ,
     AUTH_WRITE,
     REQUEST_READ,
-    REQUEST_DNS,
-    REQUEST_CONNECT,
-    REQUEST_WRITE,
-    COPY,
+    // REQUEST_DNS,
+    // REQUEST_CONNECT,
+    // REQUEST_WRITE,
+    // COPY,
     DONE,
     ERROR
 };

@@ -22,6 +22,8 @@ void nothing(const unsigned int s, struct selector_key *key) {
     // This function does nothing, it is used as a placeholder for states that do not require any action.
 }
 
+
+
 static const struct state_definition socks_v5_states[] = {
         {
                 .state = HANDSHAKE_READ,
@@ -40,6 +42,10 @@ static const struct state_definition socks_v5_states[] = {
         {
                 .state = AUTH_WRITE,
                 .on_write_ready = auth_write,
+        },
+{
+            .state = REQUEST_READ,
+            .on_arrival = nothing,
         },
         {
                 .state = DONE,
