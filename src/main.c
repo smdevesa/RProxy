@@ -3,157 +3,136 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "socks5/socks5.h"
+#include "selector.h"
+#include "args.h"
 #include <sys/select.h>
 
-#define PORT 12345
 #define MAX_CLIENTS  FD_SETSIZE
-#define BUFFER_SIZE 1024
+#define MAX_PENDING 20 // Número máximo de conexiones pendientes
 
-int set_nonblocking(int fd) {
-    int flags = fcntl(fd, F_GETFL, 0);
-    if(flags == -1) return -1;
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+static int setup_sock_addr(char *addr, unsigned short port, void *result, socklen_t *result_len) {
+    int ipv6 = strchr(addr, ':') != NULL;
+    if(ipv6) {
+        struct sockaddr_in6 sock_ipv6;
+        memset(&sock_ipv6, 0, sizeof(sock_ipv6));
+        sock_ipv6.sin6_family = AF_INET6;
+        sock_ipv6.sin6_port = htons(port);
+        if(inet_pton(AF_INET6, addr, &sock_ipv6.sin6_addr) <= 0) {
+            fprintf(stderr, "Dirección IPv6 inválida: %s\n", addr);
+            return -1;
+        }
+        *(struct sockaddr_in6 *)result = sock_ipv6;
+        *result_len = sizeof(sock_ipv6);
+        return 0;
+    }
+
+    struct sockaddr_in sock_ipv4;
+    memset(&sock_ipv4, 0, sizeof(sock_ipv4));
+    sock_ipv4.sin_family = AF_INET;
+    sock_ipv4.sin_port = htons(port);
+    if(inet_pton(AF_INET, addr, &sock_ipv4.sin_addr) <= 0) {
+        fprintf(stderr, "Dirección IPv4 inválida: %s\n", addr);
+        return -1;
+    }
+    *(struct sockaddr_in *)result = sock_ipv4;
+    *result_len = sizeof(sock_ipv4);
+    return 0;
 }
 
-int main() {
-    int listen_fd, new_fd, max_fd, i;
-    int client_fds[MAX_CLIENTS];
-    fd_set read_fds, all_fds;
-    struct sockaddr_in addr;
-    char buffer[BUFFER_SIZE];
-    
-    // Inicializar array clientes
-    for(i=0; i<MAX_CLIENTS; i++) client_fds[i] = -1;
+int main(int argc, char *argv[]) {
+    setvbuf(stdout, NULL, _IONBF, 0); // Desactivar buffering de stdout
+    setvbuf(stderr, NULL, _IONBF, 0); // Desactivar buffering de stderr
+    close(STDIN_FILENO);                    // Cerrar stdin para evitar bloqueos
+    printf("BIENVENIDOS AL SERVIDOR RPROXY\n");
 
-    // Crear socket
-    listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if(listen_fd < 0) {
+    // Creacion del selector
+    selector_status ss = SELECTOR_SUCCESS;
+    struct selector_init config = {
+            .signal = SIGALRM,
+            .select_timeout = {
+                    .tv_sec = 10,
+                    .tv_nsec = 0
+            },
+    };
+    if(selector_init(&config) != 0) {
+        fprintf(stderr, "Error al inicializar el selector\n");
+        exit(1);
+    }
+    struct fdselector *selector = selector_new(FD_SETSIZE);
+    if(selector == NULL) {
+        fprintf(stderr, "Error al crear el selector\n");
+        selector_close();
+        exit(1);
+    }
+
+    struct socks5args args;
+    parse_args(argc, argv, &args);
+    struct sockaddr_storage aux;
+    memset(&aux, 0, sizeof(aux));
+    socklen_t aux_len = sizeof(aux);
+    int server = -1;
+
+    if(setup_sock_addr(args.socks_addr, args.socks_port, &aux, &aux_len) < 0) {
+        fprintf(stderr, "Error al configurar la dirección del servidor SOCKS\n");
+        selector_close();
+        exit(1);
+    }
+
+    server = socket(aux.ss_family, SOCK_STREAM, IPPROTO_TCP);
+    if(server < 0) {
         perror("socket");
-        exit(EXIT_FAILURE);
+        selector_close();
+        exit(1);
     }
 
-    // Permitir reutilizar puerto
-    int opt = 1;
-    setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    // Bind
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(PORT);
-
-    if(bind(listen_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+    if(bind(server, (struct sockaddr *)&aux, aux_len) < 0) {
         perror("bind");
-        close(listen_fd);
-        exit(EXIT_FAILURE);
+        goto finally;
     }
-
-    // Escuchar
-    if(listen(listen_fd, SOMAXCONN) < 0) {
+    if(listen(server, MAX_PENDING) < 0) {
         perror("listen");
-        close(listen_fd);
-        exit(EXIT_FAILURE);
+        goto finally;
+    }
+    if(selector_fd_set_nio(server) == -1) {
+        perror("selector_fd_set_nio");
+        goto finally;
     }
 
-    // Set non-blocking
-    if(set_nonblocking(listen_fd) < 0) {
-        perror("set_nonblocking");
-        close(listen_fd);
-        exit(EXIT_FAILURE);
+    const fd_handler socks_v5 = {
+            .handle_read = socks_v5_passive_accept
+    };
+    ss = selector_register(selector, server, &socks_v5, OP_READ, NULL);
+    if(ss != SELECTOR_SUCCESS) {
+        fprintf(stderr, "Error al registrar el socket del servidor SOCKS: %s\n", selector_error(ss));
+        goto finally;
     }
 
-    FD_ZERO(&all_fds);
-    FD_SET(listen_fd, &all_fds);
-    max_fd = listen_fd;
-
-    printf("Echo server no bloqueante escuchando en puerto %d\n", PORT);
-
-    while(1) {
-        read_fds = all_fds;
-        int n_ready = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
-        if(n_ready < 0) {
-            if(errno == EINTR) continue;
-            perror("select");
-            break;
-        }
-
-        // Nuevo cliente
-        if(FD_ISSET(listen_fd, &read_fds)) {
-            struct sockaddr_in cli_addr;
-            socklen_t cli_len = sizeof(cli_addr);
-            new_fd = accept(listen_fd, (struct sockaddr*)&cli_addr, &cli_len);
-            if(new_fd < 0) {
-                if(errno != EWOULDBLOCK && errno != EAGAIN) perror("accept");
-            } else {
-                if(set_nonblocking(new_fd) < 0) {
-                    perror("set_nonblocking new_fd");
-                    close(new_fd);
-                } else {
-                    // Añadir a lista clientes
-                    for(i=0; i<MAX_CLIENTS; i++) {
-                        if(client_fds[i] == -1) {
-                            client_fds[i] = new_fd;
-                            FD_SET(new_fd, &all_fds);
-                            if(new_fd > max_fd) max_fd = new_fd;
-                            printf("Cliente conectado: fd=%d\n", new_fd);
-                            break;
-                        }
-                    }
-                    if(i == MAX_CLIENTS) {
-                        printf("Demasiados clientes\n");
-                        close(new_fd);
-                    }
-                }
-            }
-            if(--n_ready <= 0) continue;
-        }
-
-        // Revisar clientes
-        for(i=0; i<MAX_CLIENTS; i++) {
-            int fd = client_fds[i];
-            if(fd == -1) continue;
-            if(FD_ISSET(fd, &read_fds)) {
-                ssize_t n = read(fd, buffer, sizeof(buffer));
-                if(n <= 0) {
-                    if(n == 0) {
-                        printf("Cliente desconectado: fd=%d\n", fd);
-                    } else if(errno != EWOULDBLOCK && errno != EAGAIN) {
-                        perror("read");
-                    }
-                    close(fd);
-                    FD_CLR(fd, &all_fds);
-                    client_fds[i] = -1;
-                } else {
-                    // Echo: escribir lo que leyó
-                    ssize_t total_written = 0;
-                    while(total_written < n) {
-                        ssize_t w = write(fd, buffer + total_written, n - total_written);
-                        if(w <= 0) {
-                            if(errno == EWOULDBLOCK || errno == EAGAIN) {
-                                // No puede escribir ahora, salimos para evitar busy wait
-                                break;
-                            } else {
-                                perror("write");
-                                close(fd);
-                                FD_CLR(fd, &all_fds);
-                                client_fds[i] = -1;
-                                break;
-                            }
-                        }
-                        total_written += w;
-                    }
-                }
-                if(--n_ready <= 0) break;
-            }
+    printf("Servidor SOCKS5 escuchando en %s:%d\n", args.socks_addr, args.socks_port);
+    while(true) {
+        ss = selector_select(selector);
+        if(ss != SELECTOR_SUCCESS) {
+            fprintf(stderr, "Error en selector_select: %s\n", selector_error(ss));
+            goto finally;
         }
     }
 
-    close(listen_fd);
+    finally:
+    if(server >= 0) {
+        close(server);
+    }
+    if(selector != NULL) {
+        selector_destroy(selector);
+    }
+    selector_close();
+    printf("Servidor SOCKS5 cerrado.\n");
     return 0;
 }
