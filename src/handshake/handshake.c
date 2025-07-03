@@ -51,7 +51,7 @@ unsigned handshake_write(struct selector_key *key) {
         // If there is still data to write, continue writing
         return HANDSHAKE_WRITE;
     }
-    if (selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS || handshake_parser_has_error(p)) {
+    if (handshake_parser_has_error(p) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
         return ERROR;
     }
     return (p->selected_method == NO_AUTH) ? REQUEST_READ : AUTH_READ;

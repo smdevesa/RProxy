@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <sys/socket.h>
 #include "../handshake/handshake_parser.h"
+#include "../auth/auth_parser.h"
 #include "../stm.h"
 #include "../buffer.h"
 
@@ -22,6 +23,7 @@ struct client_data {
     struct sockaddr_storage client_addr;
     union {
         struct handshake_parser handshake_parser;
+        struct auth_parser auth_parser;
     } client;
     bool closed;
     int client_fd;
