@@ -78,4 +78,6 @@ enum auth_methods handshake_parser_get_auth_method(const handshake_parser_t *par
  */
 bool handshake_parser_build_response(const handshake_parser_t *parser, struct buffer *buf);
 
+
+
 #endif //RPROXY_HANDSHAKE_PARSER_H

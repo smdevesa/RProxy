@@ -26,6 +26,7 @@ void auth_parser_init(auth_parser_t *parser) {
         return;
     }
     parser->state = AUTH_PARSER_VERSION;
+    parser->authenticated = false;
     parser->username[0] = '\0';
     parser->password[0] = '\0';
     parser->bytes_read = 0;
@@ -44,6 +45,27 @@ bool auth_parser_is_done(const auth_parser_t *parser) {
 
 bool auth_parser_has_error(const auth_parser_t *parser) {
     return parser != NULL && parser->state == AUTH_PARSER_ERROR;
+}
+
+bool auth_parser_build_response(const auth_parser_t *parser, struct buffer *buf) {
+    if (!buffer_can_write(buf) || parser == NULL || parser->state != AUTH_PARSER_DONE) {
+        return false;
+    }
+
+    if (parser->authenticated) {
+        buffer_write(buf, AUTH_VERSION); // Version
+        if (!buffer_can_write(buf)) {
+            return false;
+        }
+        buffer_write(buf, 0x00); // Success
+    } else {
+        buffer_write(buf, AUTH_VERSION); // Version
+        if (!buffer_can_write(buf)) {
+            return false;
+        }
+        buffer_write(buf, 0x01); // Failure
+    }
+    return true;
 }
 
 static enum auth_parser_state parse_version(auth_parser_t *parser, uint8_t c) {
@@ -94,4 +116,16 @@ static enum auth_parser_state parse_done(auth_parser_t *parser, uint8_t c) {
 
 static enum auth_parser_state parse_error(auth_parser_t *parser, uint8_t c) {
     return AUTH_PARSER_ERROR;
+}
+
+void try_to_authenticate(auth_parser_t *parser) {
+    // TODO: Implement actual authentication logic here.
+    if (parser == NULL || !auth_parser_is_done(parser) || auth_parser_has_error(parser)) {
+        return;
+    }
+    parser->authenticated = true;
+}
+
+bool auth_parser_is_authenticated(const auth_parser_t *parser) {
+    return parser != NULL && parser->authenticated;
 }

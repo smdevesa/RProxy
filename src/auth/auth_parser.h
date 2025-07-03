@@ -26,6 +26,7 @@ typedef struct auth_parser {
     char password[AUTH_MAX_PASSWORD_LENGTH + 1]; // Buffer for the password
     uint8_t total_bytes_to_read;                 // Total bytes expected to read in the current state
     uint8_t bytes_read;                          // Bytes read so far in the current state
+    bool authenticated;                          // Flag indicating if the user is authenticated
 } auth_parser_t;
 
 /**
@@ -69,5 +70,19 @@ bool auth_parser_has_error(const auth_parser_t *parser);
  */
 bool auth_parser_build_response(const auth_parser_t *parser, struct buffer *buf);
 
-#endif //RPROXY_AUTH_PARSER_H
+/**
+ * Attempts to authenticate the user based on the parsed credentials.
+ *
+ * @param parser Pointer to the authentication parser.
+ */
+void try_to_authenticate(auth_parser_t *parser);
 
+/**
+ * Checks if the user is authenticated.
+ *
+ * @param parser Pointer to the authentication parser.
+ * @return true if the user is authenticated, false otherwise.
+ */
+bool auth_parser_is_authenticated(const auth_parser_t *parser);
+
+#endif //RPROXY_AUTH_PARSER_H
