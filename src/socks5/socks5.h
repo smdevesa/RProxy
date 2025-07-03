@@ -1,13 +1,10 @@
-//
-// Created by Santiago Devesa on 02/07/2025.
-//
-
 #ifndef RPROXY_SOCKS5_H
 #define RPROXY_SOCKS5_H
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/socket.h>
+#include "../selector.h"
 #include "../handshake/handshake_parser.h"
 #include "../auth/auth_parser.h"
 #include "../stm.h"
@@ -47,5 +44,7 @@ enum socks5_state {
     DONE,
     ERROR
 };
+
+void socks_v5_passive_accept(struct selector_key *key);
 
 #endif //RPROXY_SOCKS5_H
