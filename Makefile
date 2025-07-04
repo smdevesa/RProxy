@@ -9,7 +9,7 @@ OBJ_DIR := obj
 BIN_DIR := bin
 
 # Subdirectorios fuente
-SUBDIRS := auth handshake socks5
+SUBDIRS := auth handshake socks5 request
 
 # Archivos fuente en src raíz
 SRCS := $(wildcard $(SRC_DIR)/*.c)

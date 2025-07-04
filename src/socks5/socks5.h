@@ -9,6 +9,7 @@
 #include "../auth/auth_parser.h"
 #include "../stm.h"
 #include "../buffer.h"
+#include "../request/request_parser.h"
 
 #define BUFFER_SIZE 32768
 
@@ -21,6 +22,7 @@ struct client_data {
     union {
         struct handshake_parser handshake_parser;
         struct auth_parser auth_parser;
+        struct request_parser request_parser;
     } client;
     bool closed;
     int client_fd;

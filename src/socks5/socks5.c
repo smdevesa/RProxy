@@ -4,6 +4,7 @@
 #include "../stm.h"
 #include "../handshake/handshake.h"
 #include "../auth/auth.h"
+#include "../request/request.h"
 
 // Forward declarations of state handlers
 static void socks_v5_read(struct selector_key *key);
@@ -43,9 +44,10 @@ static const struct state_definition socks_v5_states[] = {
                 .state = AUTH_WRITE,
                 .on_write_ready = auth_write,
         },
-{
+    {
             .state = REQUEST_READ,
-            .on_arrival = nothing,
+            .on_arrival = request_read_init,
+            .on_read_ready = request_read,
         },
         {
                 .state = DONE,
