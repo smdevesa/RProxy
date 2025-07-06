@@ -5,10 +5,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-#define IPV4_LENGTH 4
-#define IPV6_LENGTH 16
-
-typedef request_parser_state (*parser_state_fn)(request_parser_t *, uint8_t);
+typedef request_parser_state (*state_handler)(request_parser_t *, uint8_t);
 
 static request_parser_state parse_version(request_parser_t *parser, uint8_t c);
 static request_parser_state parse_command(request_parser_t *parser, uint8_t c);
@@ -18,15 +15,15 @@ static request_parser_state parse_dst_addr(request_parser_t *parser, uint8_t c);
 static request_parser_state parse_dst_port(request_parser_t *parser, uint8_t c);
 static request_parser_state parse_error(request_parser_t *parser, uint8_t c);
 
-static parser_state_fn state_table[] = {
-        parse_version,
-        parse_command,
-        parse_rsv,
-        parse_atyp,
-        parse_dst_addr,
-        parse_dst_port,
-        parse_error,
-        parse_error
+static state_handler state_handlers[] = {
+    (state_handler) parse_version,
+    (state_handler) parse_command,
+    (state_handler) parse_rsv,
+    (state_handler) parse_atyp,
+    (state_handler) parse_dst_addr,
+    (state_handler) parse_dst_port,
+    (state_handler) parse_error,
+    (state_handler) parse_error
 };
 
 void request_parser_init(request_parser_t *parser) {
@@ -40,7 +37,7 @@ void request_parser_init(request_parser_t *parser) {
 request_parser_state request_parser_consume(request_parser_t *parser, struct buffer *b) {
     while (buffer_can_read(b) && !request_parser_is_done(parser)) {
         uint8_t c = buffer_read(b);
-        parser->state = state_table[parser->state](parser, c);
+        parser->state = state_handlers[parser->state](parser, c);
     }
     return parser->state;
 }
@@ -53,6 +50,48 @@ bool request_parser_is_done(const request_parser_t *parser) {
 bool request_parser_has_error(const request_parser_t *parser) {
     return parser != NULL && parser->state == REQUEST_PARSER_ERROR;
 }
+
+bool request_build_response(const request_parser_t *parser, struct buffer *buf, request_reply reply_code) {
+    if (!buffer_can_write(buf) || parser == NULL || parser->state != REQUEST_PARSER_DONE) {
+        return false;
+    }
+    // Write the version and reply code
+    buffer_write(buf, 0x05); // Version
+    if (!buffer_can_write(buf)) {
+        return false;
+    }
+    buffer_write(buf, reply_code); // Reply code for success
+    if (!buffer_can_write(buf)) {
+        return false;
+    }
+    buffer_write(buf, 0x00); // Reserved byte
+    if (!buffer_can_write(buf)) {
+        return false;
+    }
+    buffer_write(buf, parser->address_type); // Address type
+    if (!buffer_can_write(buf)) {
+        return false;
+    }
+    // Write the destination address
+    if (parser->address_type == ADDRESS_TYPE_IPV4) {
+        for (size_t i = 0; i < IPV4_LENGTH; i++) {
+            buffer_write(buf, parser->dst_addr[i]);
+        }
+    } else if (parser->address_type == ADDRESS_TYPE_IPV6) {
+        for (size_t i = 0; i < IPV6_LENGTH; i++) {
+            buffer_write(buf, parser->dst_addr[i]);
+        }
+    } else if (parser->address_type == ADDRESS_TYPE_DOMAIN) {
+        buffer_write(buf, parser->dst_addr_length); // Domain name length
+        for (size_t i = 0; i < parser->dst_addr_length; i++) {
+            buffer_write(buf, parser->dst_addr[i]);
+        }
+    } else {
+        return false; // Unsupported address type
+    }
+    return true;
+}
+
 
 static request_parser_state parse_version(request_parser_t *parser, uint8_t c) {
     return (c == 0x05) ? REQUEST_PARSER_COMMAND : REQUEST_PARSER_ERROR;
@@ -122,3 +161,4 @@ static request_parser_state parse_error(request_parser_t *parser, uint8_t c) {
     (void)c;
     return REQUEST_PARSER_ERROR;
 }
+

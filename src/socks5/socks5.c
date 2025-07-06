@@ -120,6 +120,11 @@ void close_connection(struct selector_key *key) {
     free(data);
 }
 
+selector_status register_origin_selector(struct selector_key *key, int origin_fd, struct client_data *data){
+    return selector_register(key->s, origin_fd, &socks_v5_handler, OP_READ, data);
+}
+
+
 static void socks_v5_read(struct selector_key *key) {
     struct state_machine *sm = &ATTACHMENT(key)->sm;
     enum socks5_state state = stm_handler_read(sm, key);
