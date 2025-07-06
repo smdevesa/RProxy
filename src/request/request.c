@@ -1,7 +1,3 @@
-////
-//// Created by Tizifuchi12 on 4/7/2025.
-////
-//
 #include "request.h"
 
 #include "../request/request_parser.h"
@@ -71,16 +67,32 @@ unsigned request_write(struct selector_key *key) {
     if (buffer_can_read(&data->origin_buffer)) {
         return REQUEST_WRITE;
     }
+
     if (request_parser_has_error(&data->client.request_parser) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
-        //close_connection(key);
         return ERROR;
     }
-    return DONE; // All data written //COPY??? TODO
+
+    return COPY;
 }
 
-unsigned request_connect(struct selector_key* key)
-{   //Missing TODO
+unsigned request_connect(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
+    int error = 0;
+    socklen_t len = sizeof(error);
+
+    if (getsockopt(data->origin_fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0 || error != 0) {
+        request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_CONNECTION_REFUSED);
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
+            return ERROR;
+        }
+        return REQUEST_WRITE;
+    }
+
+    request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS);
+    if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
+        return ERROR;
+    }
+    return REQUEST_WRITE;
 }
 
 static unsigned analyze_request(struct selector_key *key) {
@@ -144,58 +156,61 @@ static unsigned analyze_request(struct selector_key *key) {
     return REQUEST_WRITE;
 }
 
-    static unsigned start_connection(struct selector_key * key){
+static void handle_error(struct selector_key *key, struct client_data *data, unsigned reply_code) {
+    request_build_response(&data->client.request_parser, &data->origin_buffer, reply_code);
+    if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
+        perror("selector_set_interest");
+    }
+}
+
+static int setup_non_blocking_socket(int fd) {
+    if (selector_fd_set_nio(fd) == -1) {
+        perror("selector_fd_set_nio");
+        close(fd);
+        return -1;
+    }
+    return 0;
+}
+
+static unsigned start_connection(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
 
     data->origin_fd = socket(data->origin_addrinfo->ai_family, data->origin_addrinfo->ai_socktype, data->origin_addrinfo->ai_protocol);
     if (data->origin_fd < 0) {
         perror("socket");
-        //TODO este flow de respuesta de error podría ser modularizado
-        request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
-        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
-            return ERROR;
-        }
+        handle_error(key, data, REQUEST_REPLY_FAILURE);
         return REQUEST_WRITE;
     }
-    if (selector_fd_set_nio(data->origin_fd) == -1){  // Setear a no bloqueante{
-        close(data->origin_fd);
-        perror("selector_fd_set_nio");
-        request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
-        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
-            return ERROR;
-        }
+
+    if (setup_non_blocking_socket(data->origin_fd) < 0) {
+        handle_error(key, data, REQUEST_REPLY_FAILURE);
         return REQUEST_WRITE;
     }
+
     if (register_origin_selector(key, data->origin_fd, data) != SELECTOR_SUCCESS) {
         close(data->origin_fd);
         data->origin_fd = -1; // Reset origin_fd on failure
         perror("register_origin_selector");
-        request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
-        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
-            return ERROR;
-        }
+        handle_error(key, data, REQUEST_REPLY_FAILURE);
         return REQUEST_WRITE;
     }
 
-    if (connect(data->origin_fd, data->origin_addrinfo->ai_addr, data->origin_addrinfo->ai_addrlen) < 0){
-        if (errno == EINPROGRESS){
+    if (connect(data->origin_fd, data->origin_addrinfo->ai_addr, data->origin_addrinfo->ai_addrlen) < 0) {
+        if (errno == EINPROGRESS) {
             if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
                 return ERROR;
             }
             return REQUEST_CONNECT; // Connection in progress
-        }
-        else{
-            request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_CONNECTION_REFUSED);
-            if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
-                return ERROR;
-            }
+        } else {
+            handle_error(key, data, REQUEST_REPLY_CONNECTION_REFUSED);
+            return REQUEST_WRITE;
         }
     }
-    // If we reach here, the connection is in progress or was successful
+
+    // Connection successful
     request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS);
     if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
         return ERROR;
     }
-    return REQUEST_WRITE; // Connection established or in progress
+    return REQUEST_WRITE;
 }
-

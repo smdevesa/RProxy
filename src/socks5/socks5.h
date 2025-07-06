@@ -2,7 +2,6 @@
 #define RPROXY_SOCKS5_H
 
 #include <stdbool.h>
-#include <stdint.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include "../selector.h"
@@ -41,10 +40,10 @@ enum socks5_state {
     AUTH_READ,
     AUTH_WRITE,
     REQUEST_READ,
-     REQUEST_DNS,
-     REQUEST_CONNECT,
-     REQUEST_WRITE,
-    // COPY,
+    REQUEST_DNS,
+    REQUEST_CONNECT,
+    REQUEST_WRITE,
+    COPY,
     DONE,
     ERROR
 };

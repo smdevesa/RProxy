@@ -1,7 +1,7 @@
 // request_parser.c - Parser para la fase de REQUEST del protocolo SOCKS5
 
 #include "request_parser.h"
-#include <stdint.h>
+
 #include <string.h>
 #include <arpa/inet.h>
 

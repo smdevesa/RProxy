@@ -1,7 +1,3 @@
-////
-//// Created by jrambau on 03/07/25.
-////
-
 #ifndef REQUEST_PARSER_H
 #define REQUEST_PARSER_H
 
