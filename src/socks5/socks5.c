@@ -50,6 +50,19 @@ static const struct state_definition socks_v5_states[] = {
             .on_read_ready = request_read,
         },
         {
+            .state = REQUEST_DNS,
+            .on_arrival = nothing,
+        },
+    {
+        .state = REQUEST_CONNECT,
+        .on_arrival = nothing,
+    },
+    {
+        .state = REQUEST_WRITE,
+        .on_arrival = nothing,
+        },
+
+        {
                 .state = DONE,
                 .on_arrival = nothing,
         },
