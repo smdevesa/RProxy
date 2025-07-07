@@ -48,8 +48,8 @@ enum socks5_state {
     ERROR
 };
 
+void close_connection(struct selector_key *key);
 void socks_v5_passive_accept(struct selector_key *key);
-
 selector_status register_origin_selector(struct selector_key *key, int origin_fd, struct client_data *data);
 
 #endif //RPROXY_SOCKS5_H

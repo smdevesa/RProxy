@@ -1,6 +1,8 @@
 #include "socks5.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "../copy.h"
 #include "../stm.h"
 #include "../handshake/handshake.h"
 #include "../auth/auth.h"
@@ -11,6 +13,8 @@ static void socks_v5_read(struct selector_key *key);
 static void socks_v5_write(struct selector_key *key);
 static void socks_v5_block(struct selector_key *key);
 static void socks_v5_close(struct selector_key *key);
+static void handle_error(const unsigned state,struct selector_key *key);
+static void handle_done(const unsigned state, struct selector_key *key);
 
 static fd_handler socks_v5_handler = {
     .handle_read = socks_v5_read,
@@ -63,15 +67,18 @@ static const struct state_definition socks_v5_states[] = {
         },
     {
             .state = COPY,
-            .on_arrival = nothing,
+            .on_arrival = copy_init,
+            .on_read_ready = copy_read,
+            .on_write_ready = copy_write,
+            .on_departure = copy_close,
         },
     {
             .state = DONE,
-            .on_arrival = nothing,
+            .on_arrival = handle_done,
         },
     {
             .state = ERROR,
-            .on_arrival = nothing,
+            .on_arrival = handle_error,
         }
 };
 
@@ -119,17 +126,19 @@ void socks_v5_passive_accept(struct selector_key *key) {
 
 void close_connection(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
-    if(data->closed) {
+    if (data->closed) {
         return; // Already closed
     }
     data->closed = true;
     printf("Closing connection: fd=%d\n", data->client_fd);
 
     if (data->client_fd >= 0) {
+        selector_unregister_fd(key->s, data->client_fd);
         close(data->client_fd);
         data->client_fd = -1;
     }
     if (data->origin_fd >= 0) {
+        selector_unregister_fd(key->s, data->origin_fd);
         close(data->origin_fd);
         data->origin_fd = -1;
     }
@@ -172,4 +181,12 @@ static void socks_v5_close(struct selector_key *key) {
     struct state_machine *sm = &ATTACHMENT(key)->sm;
     stm_handler_close(sm, key);
     close_connection(key);
+}
+
+static void handle_error(const unsigned state, struct selector_key *key) {
+    printf("Error in state %u, closing connection\n", state);
+}
+
+static void handle_done(const unsigned state, struct selector_key *key) {
+    printf("Done in state %u, closing connection\n", state);
 }
