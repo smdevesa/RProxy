@@ -21,8 +21,7 @@ void request_read_init(const unsigned state, struct selector_key *key) {
     }
 }
 
-unsigned request_read(struct selector_key *key)
-{
+unsigned request_read(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
     struct request_parser *parser = &data->client.request_parser;
 
@@ -88,11 +87,7 @@ unsigned request_connect(struct selector_key *key) {
         return REQUEST_WRITE;
     }
 
-    request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS);
-    if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
-        return ERROR;
-    }
-    return REQUEST_WRITE;
+    return start_connection(key);
 }
 
 static unsigned analyze_request(struct selector_key *key) {
@@ -213,4 +208,10 @@ static unsigned start_connection(struct selector_key *key) {
         return ERROR;
     }
     return REQUEST_WRITE;
+}
+
+
+// Por ahora, el DNS ya esta resuelto para probar - TODO hacerlo bien
+unsigned request_DNS_completed(struct selector_key *key) {
+    return REQUEST_CONNECT;
 }

@@ -26,49 +26,52 @@ void nothing(const unsigned int s, struct selector_key *key) {
 
 
 static const struct state_definition socks_v5_states[] = {
-        {
-                .state = HANDSHAKE_READ,
-                .on_arrival = handshake_read_init,
-                .on_read_ready = handshake_read,
+    {
+            .state = HANDSHAKE_READ,
+            .on_arrival = handshake_read_init,
+            .on_read_ready = handshake_read,
         },
-        {
-                .state = HANDSHAKE_WRITE,
-                .on_write_ready = handshake_write,
+    {
+            .state = HANDSHAKE_WRITE,
+            .on_write_ready = handshake_write,
         },
-        {
-                .state = AUTH_READ,
-                .on_arrival = auth_read_init,
-                .on_read_ready = auth_read,
+    {
+            .state = AUTH_READ,
+            .on_arrival = auth_read_init,
+            .on_read_ready = auth_read,
         },
-        {
-                .state = AUTH_WRITE,
-                .on_write_ready = auth_write,
+    {
+            .state = AUTH_WRITE,
+            .on_write_ready = auth_write,
         },
     {
             .state = REQUEST_READ,
             .on_arrival = request_read_init,
             .on_read_ready = request_read,
         },
-        {
+    {
             .state = REQUEST_DNS,
+            .on_block_ready = request_DNS_completed,
+        },
+    {
+            .state = REQUEST_CONNECT,
+            .on_write_ready = request_connect,
+        },
+    {
+            .state = REQUEST_WRITE,
+            .on_write_ready = request_write,
+        },
+    {
+            .state = COPY,
             .on_arrival = nothing,
         },
     {
-        .state = REQUEST_CONNECT,
-        .on_arrival = nothing,
-    },
+            .state = DONE,
+            .on_arrival = nothing,
+        },
     {
-        .state = REQUEST_WRITE,
-        .on_arrival = nothing,
-        },
-
-        {
-                .state = DONE,
-                .on_arrival = nothing,
-        },
-        {
-                .state = ERROR,
-                .on_arrival = nothing,
+            .state = ERROR,
+            .on_arrival = nothing,
         }
 };
 

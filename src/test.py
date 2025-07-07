@@ -1,18 +1,3 @@
-# import socket
-#
-# sock = socket.create_connection(('127.0.0.1', 1080))
-#
-# # Handshake: version 5, 1 method, username/password (0x02)
-# sock.sendall(b'\x05\x01\x02')
-# print("Handshake response:", sock.recv(2))
-#
-# # Auth: version 1, username length + username, password length + password
-# sock.sendall(b'\x01\x05admin\x05admin')
-# print("Auth response:", sock.recv(2))
-#
-# sock.close()
-
-
 import socket
 
 def main():
@@ -38,8 +23,9 @@ def main():
     request = b'\x05\x01\x00\x01' + b'\x01\x02\x03\x04' + b'\x1f\x90'  # 0x1f90 = 8080
     sock.sendall(request)
 
-    # Acá todavía no hay respuesta todavia, pero si llega hasta acá sin romperse, está todo bien
-    print("Request sent. No response expected yet (until write state is implemented).")
+    # Recibir respuesta del servidor
+    response = sock.recv(10)
+    print(f"Request response: {response.hex()}")  # Imprime la respuesta en formato hexadecimal
 
     sock.close()
 
