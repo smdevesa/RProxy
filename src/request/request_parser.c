@@ -52,45 +52,18 @@ bool request_parser_has_error(const request_parser_t *parser) {
 }
 
 bool request_build_response(const request_parser_t *parser, struct buffer *buf, request_reply reply_code) {
-    if (!buffer_can_write(buf) || parser == NULL || parser->state != REQUEST_PARSER_DONE) {
-        return false;
-    }
-    // Write the version and reply code
-    buffer_write(buf, 0x05); // Version
-    if (!buffer_can_write(buf)) {
-        return false;
-    }
-    buffer_write(buf, reply_code); // Reply code for success
-    if (!buffer_can_write(buf)) {
-        return false;
-    }
-    buffer_write(buf, 0x00); // Reserved byte
-    if (!buffer_can_write(buf)) {
-        return false;
-    }
-    buffer_write(buf, parser->address_type); // Address type
-    if (!buffer_can_write(buf)) {
-        return false;
-    }
-    // Write the destination address
-    if (parser->address_type == ADDRESS_TYPE_IPV4) {
-        for (size_t i = 0; i < IPV4_LENGTH; i++) {
-            buffer_write(buf, parser->dst_addr[i]);
+ //Build the response based on the parser state
+ uint8_t answer[] = {0x05, reply_code, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    int l = (sizeof(answer) / sizeof(*(answer)));
+    for (int i = 0; i < l; ++i) {
+        if (!buffer_can_write(buf)) {
+            return false;
         }
-    } else if (parser->address_type == ADDRESS_TYPE_IPV6) {
-        for (size_t i = 0; i < IPV6_LENGTH; i++) {
-            buffer_write(buf, parser->dst_addr[i]);
-        }
-    } else if (parser->address_type == ADDRESS_TYPE_DOMAIN) {
-        buffer_write(buf, parser->dst_addr_length); // Domain name length
-        for (size_t i = 0; i < parser->dst_addr_length; i++) {
-            buffer_write(buf, parser->dst_addr[i]);
-        }
-    } else {
-        return false; // Unsupported address type
+        buffer_write(buf, answer[i]);
     }
     return true;
 }
+
 
 
 static request_parser_state parse_version(request_parser_t *parser, uint8_t c) {
