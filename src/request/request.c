@@ -40,6 +40,13 @@ unsigned request_read(struct selector_key *key) {
     if (request_parser_is_done(parser)) {
         if (!request_parser_has_error(parser)){
             analyze_request(key);
+        } else {
+            request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
+            if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
+                perror("selector_set_interest");
+                return ERROR;
+            }
+            return REQUEST_WRITE;
         }
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || !request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS)) {
             perror("selector_set_interest");
@@ -101,8 +108,7 @@ static unsigned analyze_request(struct selector_key *key) {
             if (addr != NULL) free(addr);
             if (data->origin_addrinfo != NULL) free(data->origin_addrinfo);
             perror("malloc or calloc");
-            return ERROR;
-            //goto finally
+            goto finally;
         }
 
         memcpy(&addr->sin_addr, parser->dst_addr, IPV4_LENGTH);
@@ -123,8 +129,7 @@ static unsigned analyze_request(struct selector_key *key) {
             if (addr6 != NULL) free(addr6);
             if (data->origin_addrinfo != NULL) free(data->origin_addrinfo);
             perror("malloc or calloc");
-            return ERROR;
-            //goto finally
+            goto finally;
         }
 
         memcpy(&addr6->sin6_addr, parser->dst_addr, IPV6_LENGTH);
@@ -149,7 +154,11 @@ static unsigned analyze_request(struct selector_key *key) {
         return ERROR;
     }
     return REQUEST_WRITE;
+
+    finally:
+    request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
 }
+
 
 static void handle_error(struct selector_key *key, struct client_data *data, unsigned reply_code) {
     request_build_response(&data->client.request_parser, &data->origin_buffer, reply_code);
