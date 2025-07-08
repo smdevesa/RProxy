@@ -53,7 +53,7 @@ static const struct state_definition socks_v5_states[] = {
         },
     {
             .state = REQUEST_DNS,
-            .on_block_ready = request_DNS_completed,
+            .on_block_ready = request_dns,
         },
     {
             .state = REQUEST_CONNECT,
