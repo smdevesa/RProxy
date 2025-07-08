@@ -1,35 +1,35 @@
-//
-// Created by Santiago Devesa on 02/07/2025.
-//
-
 #ifndef RPROXY_SOCKS5_H
 #define RPROXY_SOCKS5_H
 
 #include <stdbool.h>
-#include <stdint.h>
 #include <sys/socket.h>
+#include <netdb.h>
+#include "../selector.h"
 #include "../handshake/handshake_parser.h"
 #include "../auth/auth_parser.h"
 #include "../stm.h"
 #include "../buffer.h"
+#include "../request/request_parser.h"
 
 #define BUFFER_SIZE 32768
 
 // Get the client data from the selector key
 #define ATTACHMENT(key) ((struct client_data *)((key)->data))
 
-struct client_data {
+struct  client_data {
     struct state_machine sm;
     struct sockaddr_storage client_addr;
     union {
         struct handshake_parser handshake_parser;
         struct auth_parser auth_parser;
+        struct request_parser request_parser;
     } client;
     bool closed;
     int client_fd;
     int origin_fd;
     struct buffer client_buffer;
     struct buffer origin_buffer;
+    struct addrinfo * origin_addrinfo; // Used for DNS resolution
     uint8_t client_buffer_data[BUFFER_SIZE];
     uint8_t origin_buffer_data[BUFFER_SIZE];
 };
@@ -47,5 +47,9 @@ enum socks5_state {
     DONE,
     ERROR
 };
+
+void close_connection(struct selector_key *key);
+void socks_v5_passive_accept(struct selector_key *key);
+selector_status register_origin_selector(struct selector_key *key, int origin_fd, struct client_data *data);
 
 #endif //RPROXY_SOCKS5_H
