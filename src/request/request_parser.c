@@ -1,3 +1,4 @@
+
 // request_parser.c - Parser para la fase de REQUEST del protocolo SOCKS5
 
 #include "request_parser.h"
@@ -134,4 +135,3 @@ static request_parser_state parse_error(request_parser_t *parser, uint8_t c) {
     (void)c;
     return REQUEST_PARSER_ERROR;
 }
-

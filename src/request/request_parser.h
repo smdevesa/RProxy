@@ -10,6 +10,7 @@
 #define IPV4_LENGTH 4
 #define IPV6_LENGTH 16
 
+
 typedef enum request_parser_state {
     REQUEST_PARSER_VERSION,          // Reading the version byte (must be 0x05)
     REQUEST_PARSER_COMMAND,          // Reading the command byte (e.g., CONNECT, BIND)
