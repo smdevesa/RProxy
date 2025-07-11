@@ -78,6 +78,8 @@ unsigned request_write(struct selector_key *key) {
 
 unsigned request_connect(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
+
+
     int error = 0;
     socklen_t len = sizeof(error);
 
@@ -202,6 +204,7 @@ static unsigned start_connection(struct selector_key *key) {
         return REQUEST_WRITE;
     }
 
+
     if (setup_non_blocking_socket(data->origin_fd) < 0) {
         handle_error(key, data, REQUEST_REPLY_FAILURE);
         return REQUEST_WRITE;
@@ -232,6 +235,7 @@ static unsigned start_connection(struct selector_key *key) {
     if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
         return ERROR;
     }
+
     return REQUEST_WRITE;
 }
 

@@ -9,52 +9,10 @@
 #include <netdb.h>
 
 
-static void cleanup_previous_resolution(struct client_data *d) {
-    if (d->origin_addrinfo != NULL) {
-        if (d->resolution_from_getaddrinfo)
-            freeaddrinfo(d->origin_addrinfo);
-        else
-            free(d->origin_addrinfo);
-        d->origin_addrinfo = NULL;
-    }
-}
-
-static void create_direct_addrinfo(struct client_data *data, int family, const void *raw_addr,uint16_t port) {
-    cleanup_previous_resolution(data);
-    data->origin_addrinfo = calloc(1, sizeof(struct addrinfo));
-    if (!data->origin_addrinfo) return;
-
-    if (family == AF_INET) {
-        struct sockaddr_in *sa = calloc(1, sizeof *sa);
-        memcpy(&sa->sin_addr, raw_addr, 4);
-        sa->sin_family = AF_INET;
-        sa->sin_port   = htons(port);
-
-        data->origin_addrinfo->ai_family = AF_INET;
-        data->origin_addrinfo->ai_socktype = SOCK_STREAM;
-        data->origin_addrinfo->ai_addr = (struct sockaddr *) sa;
-        data->origin_addrinfo->ai_addrlen = sizeof *sa;
-
-    } else { /* AF_INET6 */
-        struct sockaddr_in6 *sa6 = calloc(1, sizeof *sa6);
-        memcpy(&sa6->sin6_addr, raw_addr, 16);
-        sa6->sin6_family = AF_INET6;
-        sa6->sin6_port = htons(port);
-
-        data->origin_addrinfo->ai_family = AF_INET6;
-        data->origin_addrinfo->ai_socktype = SOCK_STREAM;
-        data->origin_addrinfo->ai_addr = (struct sockaddr *) sa6;
-        data->origin_addrinfo->ai_addrlen = sizeof *sa6;
-    }
-    data->resolution_from_getaddrinfo = false;
-}
-
 void dns_resolver_init(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
     struct request_parser *parser = &data->client.request_parser;
 
-
-    printf(">> dns_resolver_init host='%.*s' port=%zu\n",(int)parser->dst_addr_length, parser->dst_addr, parser->dst_port);
 
     if (parser->dst_addr_length >= sizeof(data->dns_host)) {
         parser->dst_addr_length = sizeof(data->dns_host) - 1;
@@ -74,8 +32,6 @@ void dns_resolver_init(struct selector_key *key) {
     memset(&hints, 0, sizeof hints);
     hints.ai_socktype = SOCK_STREAM;
     data->dns_req.ar_request = &hints;
-
-    printf(">>> dns_resolver_init: key->s = %p\n", (void*)key->s);
 
     data->selector = key->s;
 
@@ -106,8 +62,7 @@ void dns_resolution_done(union sigval sv) {
         return;
     }
     printf(">>> DNS resolution completed for host=%s\n", data->dns_host);
-    printf("selector_notify_block(data->selector, %d)\n", data->client_fd);
-    selector_notify_block(data->selector, data->client_fd);  // o -1 si usás otra lógica
+    selector_notify_block(data->selector, data->client_fd);
 }
 
 void dns_resolution_cancel(struct selector_key *key) {

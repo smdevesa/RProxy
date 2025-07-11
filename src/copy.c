@@ -9,6 +9,7 @@ static unsigned write_from_origin(struct selector_key *key, struct client_data *
 void copy_init(unsigned int state, struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
 
+
     if (selector_set_interest(key->s, data->client_fd, OP_READ) != SELECTOR_SUCCESS) {
         close_connection(key);
         return;
