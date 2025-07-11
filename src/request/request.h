@@ -38,4 +38,6 @@ unsigned request_DNS_completed(struct selector_key *key);
  */
 unsigned request_connect(struct selector_key *key);
 
+unsigned request_dns(struct selector_key *key);
+
 #endif // REQUEST_H

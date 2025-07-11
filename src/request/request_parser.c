@@ -110,10 +110,12 @@ static request_parser_state parse_dst_addr(request_parser_t *parser, uint8_t c) 
     size_t index = parser->bytes_read - (parser->address_type == ADDRESS_TYPE_DOMAIN ? 1 : 0);
     if (index >= sizeof(parser->dst_addr)) return REQUEST_PARSER_ERROR;
 
-    parser->dst_addr[parser->bytes_read++] = c;
+    parser->dst_addr[index] = c;
+    parser->bytes_read++;
 
     if ((parser->address_type == ADDRESS_TYPE_DOMAIN && parser->bytes_read == parser->dst_addr_length + 1) ||
         (parser->address_type != ADDRESS_TYPE_DOMAIN && parser->bytes_read == parser->dst_addr_length)) {
+        parser->dst_addr[parser->dst_addr_length] = '\0';
         parser->bytes_read = 0;
         return REQUEST_PARSER_DST_PORT;
     }

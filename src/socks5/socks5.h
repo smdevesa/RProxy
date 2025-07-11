@@ -32,6 +32,11 @@ struct  client_data {
     struct addrinfo * origin_addrinfo; // Used for DNS resolution
     uint8_t client_buffer_data[BUFFER_SIZE];
     uint8_t origin_buffer_data[BUFFER_SIZE];
+    fd_selector selector;
+    struct gaicb dns_req;
+    char dns_host[256];
+    char dns_port[6];
+    bool resolution_from_getaddrinfo;
 };
 
 enum socks5_state {

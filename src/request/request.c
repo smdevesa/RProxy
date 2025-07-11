@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "dns_resolver.h"
 
 static unsigned analyze_request(struct selector_key *key);
 static unsigned start_connection(struct selector_key *key);
@@ -39,16 +40,10 @@ unsigned request_read(struct selector_key *key) {
 
     if (request_parser_is_done(parser)) {
         if (!request_parser_has_error(parser)){
-            analyze_request(key);
-        } else {
-            request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
-            if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
-                perror("selector_set_interest");
-                return ERROR;
-            }
-            return REQUEST_WRITE;
+            return analyze_request(key);
         }
-        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || !request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS)) {
+        request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
             perror("selector_set_interest");
             return ERROR;
         }
@@ -83,6 +78,8 @@ unsigned request_write(struct selector_key *key) {
 
 unsigned request_connect(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
+
+
     int error = 0;
     socklen_t len = sizeof(error);
 
@@ -94,7 +91,15 @@ unsigned request_connect(struct selector_key *key) {
         return REQUEST_WRITE;
     }
 
-    return start_connection(key);
+    if (!buffer_can_read(&data->origin_buffer)) {
+        request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS);
+    }
+
+    if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
+        return ERROR;
+    }
+
+    return REQUEST_WRITE;
 }
 
 static unsigned analyze_request(struct selector_key *key) {
@@ -144,7 +149,16 @@ static unsigned analyze_request(struct selector_key *key) {
         return start_connection(key);
     }
     if (parser->address_type == ADDRESS_TYPE_DOMAIN){
-        // Domain name handling. Let's simulate a DNS resolution
+        printf(">> ATYP_DOMAIN: checking domain\n");
+        if (parser->dst_addr_length == 0 || parser->dst_addr_length > 255) {
+            request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
+            if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
+                return ERROR;
+            }
+            return REQUEST_WRITE;
+        }
+
+        dns_resolver_init(key);
         return REQUEST_DNS;
     }
     // If we reach here, the address type is not supported
@@ -179,12 +193,17 @@ static int setup_non_blocking_socket(int fd) {
 static unsigned start_connection(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
 
+    if (data->origin_fd != -1) {
+        return REQUEST_WRITE;
+    }
+
     data->origin_fd = socket(data->origin_addrinfo->ai_family, data->origin_addrinfo->ai_socktype, data->origin_addrinfo->ai_protocol);
     if (data->origin_fd < 0) {
         perror("socket");
         handle_error(key, data, REQUEST_REPLY_FAILURE);
         return REQUEST_WRITE;
     }
+
 
     if (setup_non_blocking_socket(data->origin_fd) < 0) {
         handle_error(key, data, REQUEST_REPLY_FAILURE);
@@ -216,11 +235,23 @@ static unsigned start_connection(struct selector_key *key) {
     if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
         return ERROR;
     }
+
     return REQUEST_WRITE;
 }
 
 
-// Por ahora, el DNS ya esta resuelto para probar - TODO hacerlo bien
-unsigned request_DNS_completed(struct selector_key *key) {
-    return REQUEST_CONNECT;
+unsigned request_dns(struct selector_key *key) {
+    struct client_data *data = ATTACHMENT(key);
+
+    if (data->dns_req.ar_result == NULL) {
+        fprintf(stderr, ">> request_dns: ar_result NULL\n");
+        return REQUEST_DNS;
+    }
+    fprintf(stderr, ">> request_dns: got result, copying...\n");
+
+    data->origin_addrinfo = data->dns_req.ar_result;
+    data->dns_req.ar_result = NULL;
+    data->resolution_from_getaddrinfo = true;
+
+    return start_connection(key);
 }
