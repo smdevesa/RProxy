@@ -1,4 +1,5 @@
 #include "auth_parser.h"
+#include "../users.h"
 
 typedef enum auth_parser_state (*state_handler)(auth_parser_t *parser, uint8_t c);
 
@@ -119,11 +120,10 @@ static enum auth_parser_state parse_error(auth_parser_t *parser, uint8_t c) {
 }
 
 void try_to_authenticate(auth_parser_t *parser) {
-    // TODO: Implement actual authentication logic here.
     if (parser == NULL || !auth_parser_is_done(parser) || auth_parser_has_error(parser)) {
         return;
     }
-    parser->authenticated = true;
+    parser->authenticated = users_login(parser->username, parser->password);
 }
 
 bool auth_parser_is_authenticated(const auth_parser_t *parser) {

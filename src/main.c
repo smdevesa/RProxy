@@ -14,6 +14,7 @@
 #include "selector.h"
 #include "args.h"
 #include <sys/select.h>
+#include "users.h"
 
 #define MAX_CLIENTS  FD_SETSIZE
 #define MAX_PENDING 20 // Número máximo de conexiones pendientes
@@ -52,6 +53,9 @@ int main(int argc, char *argv[]) {
     setvbuf(stderr, NULL, _IONBF, 0); // Desactivar buffering de stderr
     close(STDIN_FILENO);                    // Cerrar stdin para evitar bloqueos
     printf("BIENVENIDOS AL SERVIDOR RPROXY\n");
+
+    users_init();
+    printf("Usuario por defecto creado: %s\n", DEFAULT_ADMIN_USERNAME);
 
     // Creacion del selector
     selector_status ss = SELECTOR_SUCCESS;
