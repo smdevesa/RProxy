@@ -1,49 +1,42 @@
-# Compilador y flags
-CC = gcc
-CFLAGS = -D_GNU_SOURCE
-LDFLAGS = -lpthread
+include Makefile.inc
 
-# Directorios
+# Directorios principales
 SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
 
-# Subdirectorios fuente
-SUBDIRS := auth handshake socks5 request
+# Fuentes por módulos
+BASE_SOURCES=$(wildcard $(SRC_DIR)/*.c)
+AUTH_SOURCES=$(wildcard $(SRC_DIR)/auth/*.c)
+HANDSHAKE_SOURCES=$(wildcard $(SRC_DIR)/handshake/*.c)
+SOCKS5_SOURCES=$(wildcard $(SRC_DIR)/socks5/*.c)
+REQUEST_SOURCES=$(wildcard $(SRC_DIR)/request/*.c)
 
-# Archivos fuente en src raíz
-SRCS := $(wildcard $(SRC_DIR)/*.c)
+# Objetos
+BASE_OBJECTS=$(BASE_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+AUTH_OBJECTS=$(AUTH_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+HANDSHAKE_OBJECTS=$(HANDSHAKE_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+SOCKS5_OBJECTS=$(SOCKS5_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+REQUEST_OBJECTS=$(REQUEST_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-# Archivos fuente en subdirectorios
-SRCS += $(foreach dir,$(SUBDIRS),$(wildcard $(SRC_DIR)/$(dir)/*.c))
+# Todos los objetos
+ALL_OBJECTS=$(BASE_OBJECTS) $(AUTH_OBJECTS) $(HANDSHAKE_OBJECTS) $(SOCKS5_OBJECTS) $(REQUEST_OBJECTS)
 
-# Archivos objeto
-OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
+# Target principal
+TARGET := $(BIN_DIR)/socks5v
 
-# Binario destino
-TARGET := $(BIN_DIR)/server
-
-# Regla principal
 all: $(TARGET)
 
-# Compilar binario
-$(TARGET): $(OBJS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $(OBJS) -o $@ $(LDFLAGS)
+$(TARGET): $(ALL_OBJECTS)
+	mkdir -p $(BIN_DIR)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(ALL_OBJECTS) -o $(TARGET)
 
-# Compilar cada .c a .o
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	@mkdir -p $(dir $@)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Crear carpetas
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
-
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
-# Limpiar
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
+	rm -rf $(OBJ_DIR)
+	rm -rf $(BIN_DIR)
 
 .PHONY: all clean

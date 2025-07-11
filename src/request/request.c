@@ -156,7 +156,7 @@ static unsigned analyze_request(struct selector_key *key) {
     return REQUEST_WRITE;
 
     finally:
-    request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
+    return request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
 }
 
 

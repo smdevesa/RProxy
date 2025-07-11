@@ -23,11 +23,9 @@ static fd_handler socks_v5_handler = {
     .handle_close = socks_v5_close,
 };
 
-void nothing(const unsigned int s, struct selector_key *key) {
+static void nothing(const unsigned int s, struct selector_key *key) {
     // This function does nothing, it is used as a placeholder for states that do not require any action.
 }
-
-
 
 static const struct state_definition socks_v5_states[] = {
     {
@@ -70,7 +68,7 @@ static const struct state_definition socks_v5_states[] = {
             .on_arrival = copy_init,
             .on_read_ready = copy_read,
             .on_write_ready = copy_write,
-            .on_departure = copy_close,
+            .on_departure = nothing,
         },
     {
             .state = DONE,
@@ -184,9 +182,9 @@ static void socks_v5_close(struct selector_key *key) {
 }
 
 static void handle_error(const unsigned state, struct selector_key *key) {
-    printf("Error in state %u, closing connection\n", state);
+    printf("Error, closing connection\n");
 }
 
 static void handle_done(const unsigned state, struct selector_key *key) {
-    printf("Done in state %u, closing connection\n", state);
+    printf("Done, closing connection\n");
 }

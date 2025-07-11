@@ -10,13 +10,11 @@
 #include "handshake_parser.h"
 
 void handshake_read_init(unsigned state, struct selector_key *key) {
-    printf("handshake_read_init\n");
     struct client_data *data = ATTACHMENT(key);
     handshake_parser_init(&data->client.handshake_parser);
 }
 
 unsigned handshake_read(struct selector_key *key) {
-    printf("begin handshake_read\n");
     struct client_data *data = ATTACHMENT(key);
     struct handshake_parser *p = &data->client.handshake_parser;
 
@@ -32,17 +30,14 @@ unsigned handshake_read(struct selector_key *key) {
     handshake_parser_parse(p, &data->client_buffer);
     if(handshake_parser_is_done(p)) {
         if(selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || !handshake_parser_build_response(p, &data->origin_buffer)) {
-            printf("handshake_read error\n");
             return ERROR;
         }
-        printf("handshake_read complete\n");
         return HANDSHAKE_WRITE;
     }
     return HANDSHAKE_READ;
 }
 
 unsigned handshake_write(struct selector_key *key) {
-    printf("begin handshake_write\n");
     struct client_data *data = ATTACHMENT(key);
     struct handshake_parser *p = &data->client.handshake_parser;
 
@@ -50,23 +45,18 @@ unsigned handshake_write(struct selector_key *key) {
     ssize_t write_count;     // Total bytes written in this operation
     uint8_t *write_buffer = buffer_read_ptr(&data->origin_buffer, &write_limit);
 
-    printf("I'm about to enter send, wish me luck\n");
     write_count = send(key->fd, write_buffer, write_limit, MSG_NOSIGNAL);
-    printf("Finished sending... Tough one.\n");
 
     if (write_count <= 0) {
-        printf("handshake_write error\n");
         return ERROR;
     }
     buffer_read_adv(&data->origin_buffer, write_count);
     if (buffer_can_read(&data->origin_buffer)) {
         // If there is still data to write, continue writing
-        printf("I'll continue writing\n");
         return HANDSHAKE_WRITE;
     }
     if (handshake_parser_has_error(p) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
         return ERROR;
     }
-    printf("handshake_write complete, your auth is %d\n", p->selected_method);
     return (p->selected_method == NO_AUTH) ? REQUEST_READ : AUTH_READ;
 }
