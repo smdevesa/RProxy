@@ -82,7 +82,8 @@ void dns_resolver_init(struct selector_key *key) {
     struct sigevent sev = {
         .sigev_notify          = SIGEV_THREAD,
         .sigev_notify_function = dns_resolution_done,
-        .sigev_value.sival_ptr = (void *)key->s,
+        .sigev_value.sival_ptr = data,
+        .sigev_notify_attributes = NULL
     };
 
     struct gaicb *reqs[1] = { &data->dns_req };
@@ -99,14 +100,14 @@ void dns_resolver_init(struct selector_key *key) {
 }
 
 void dns_resolution_done(union sigval sv) {
-    printf(">>> dns_resolution_done: selector = %p\n", sv.sival_ptr);
-    printf(">> dns_resolution_done callback\n");
-    fd_selector selector = sv.sival_ptr;
-    if (selector == NULL) {
-        fprintf(stderr, ">>> ERROR: selector is NULL in dns_resolution_done\n");
+    struct client_data *data = sv.sival_ptr;
+    if (data == NULL || data->selector == NULL) {
+        fprintf(stderr, ">>> ERROR: datos nulos\n");
         return;
     }
-    selector_notify_block(selector, -1);
+    printf(">>> DNS resolution completed for host=%s\n", data->dns_host);
+    printf("selector_notify_block(data->selector, %d)\n", data->client_fd);
+    selector_notify_block(data->selector, data->client_fd);  // o -1 si usás otra lógica
 }
 
 void dns_resolution_cancel(struct selector_key *key) {

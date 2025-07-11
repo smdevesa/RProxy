@@ -144,6 +144,7 @@ void close_connection(struct selector_key *key) {
 }
 
 selector_status register_origin_selector(struct selector_key *key, int origin_fd, struct client_data *data){
+    printf(">> register_origin_selector: origin_fd = %d\n", origin_fd);
     return selector_register(key->s, origin_fd, &socks_v5_handler, OP_READ, data);
 }
 

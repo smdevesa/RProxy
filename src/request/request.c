@@ -40,16 +40,10 @@ unsigned request_read(struct selector_key *key) {
 
     if (request_parser_is_done(parser)) {
         if (!request_parser_has_error(parser)){
-            analyze_request(key);
-        } else {
-            request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
-            if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
-                perror("selector_set_interest");
-                return ERROR;
-            }
-            return REQUEST_WRITE;
+            return analyze_request(key);
         }
-        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || !request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS)) {
+        request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
             perror("selector_set_interest");
             return ERROR;
         }
@@ -95,7 +89,15 @@ unsigned request_connect(struct selector_key *key) {
         return REQUEST_WRITE;
     }
 
-    return start_connection(key);
+    if (!buffer_can_read(&data->origin_buffer)) {
+        request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS);
+    }
+
+    if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
+        return ERROR;
+    }
+
+    return REQUEST_WRITE;
 }
 
 static unsigned analyze_request(struct selector_key *key) {
@@ -189,6 +191,10 @@ static int setup_non_blocking_socket(int fd) {
 static unsigned start_connection(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
 
+    if (data->origin_fd != -1) {
+        return REQUEST_WRITE;
+    }
+
     data->origin_fd = socket(data->origin_addrinfo->ai_family, data->origin_addrinfo->ai_socktype, data->origin_addrinfo->ai_protocol);
     if (data->origin_fd < 0) {
         perror("socket");
@@ -228,6 +234,7 @@ static unsigned start_connection(struct selector_key *key) {
     }
     return REQUEST_WRITE;
 }
+
 
 unsigned request_dns(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);

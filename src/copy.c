@@ -101,7 +101,6 @@ static unsigned read_from_origin(struct selector_key *key, struct client_data *d
 
     buffer_write_adv(&data->client_buffer, read_count);
 
-    //Intentar escribir inmediatamente al cliente
     size_t write_limit;
     uint8_t *write_buffer = buffer_read_ptr(&data->client_buffer, &write_limit);
     ssize_t write_count = send(data->client_fd, write_buffer, write_limit, MSG_NOSIGNAL);
@@ -172,4 +171,8 @@ static unsigned write_from_origin(struct selector_key *key, struct client_data *
     }
 
     return COPY;
+}
+
+void copy_close(unsigned int state, struct selector_key *key) {
+    printf("closing copy...\n");
 }
