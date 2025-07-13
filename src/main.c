@@ -16,6 +16,7 @@
 #include <sys/select.h>
 #include "users.h"
 
+
 #define MAX_CLIENTS  FD_SETSIZE
 #define MAX_PENDING 20 // Número máximo de conexiones pendientes
 

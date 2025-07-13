@@ -32,7 +32,6 @@ int main(int argc, char *argv[]) {
 
     printf("Connection established with server\n");
 
-
     if (!handshake_socks5(socket_fd)) {
         fprintf(stderr, "Error en handshake SOCKS5\n");
         close(socket_fd);

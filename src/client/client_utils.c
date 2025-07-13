@@ -53,7 +53,7 @@ bool handshake_socks5(int socket_fd) {
 }
 
 bool send_auth_credentials(int socket_fd, const char *user, const char *pass) {
-    uint8_t buffer[513]; //DESPUES CAMBIR E MAGIC NUMBER
+    uint8_t buffer[CREDENTIAL_SIZE];
     size_t offset = 0;
 
     size_t user_len = strlen(user);
@@ -72,8 +72,8 @@ bool send_auth_credentials(int socket_fd, const char *user, const char *pass) {
 }
 
 
-struct auth_result recv_auth_response(int socket_fd) {
-    struct auth_result result = { .success = false, .is_admin = false };
+auth_result recv_auth_response(int socket_fd) {
+    auth_result result = { .success = false, .is_admin = false };
 
     uint8_t version, status;
     if (read(socket_fd, &version, 1) != 1) return result;
