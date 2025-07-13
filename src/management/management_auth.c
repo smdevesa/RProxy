@@ -8,15 +8,16 @@
 #include "../management/management.h"
 #include <sys/socket.h>
 
+#define ATTACHMENT(key) ((struct management_client *)((key)->data))
 
 void management_auth_init(unsigned int state, struct selector_key *key) {
-    struct management_data *data = ATTACHMENT(key);
-    auth_parser_init(&data->auth_parser);
+    management_client *data = ATTACHMENT(key);
+    auth_parser_init(&data->management_parser.auth_parser);
 }
 
 unsigned management_auth_read(struct selector_key *key) {
     management_client *data = ATTACHMENT(key);
-    struct auth_parser *p = &data->auth_parser;
+    struct auth_parser *p = &data->management_parser.auth_parser;
 
     size_t read_limit;      // Maximum bytes to read in this operation
     ssize_t read_count;     // Total bytes read in this operation
@@ -63,11 +64,11 @@ unsigned auth_write(struct selector_key *key) {
         return MANAGEMENT_ERROR;
     }
 
-    if (auth_parser_has_error(&data->auth_parser)) {
+    if (auth_parser_has_error(&data->management_parser.auth_parser)) {
         return MANAGEMENT_ERROR;
     }
 
-    if (!auth_parser_is_authenticated(&data->auth_parser)) {
+    if (!auth_parser_is_authenticated(&data->management_parser.auth_parser)) {
         return MANAGEMENT_ERROR;
     }
 

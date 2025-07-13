@@ -11,6 +11,7 @@
  *  | VERSION | COMMAND | PAYLOAD-LEN | PAYLOAD |
  *  ---------------------------------------------
  *  |    1    |    1    |      1      |  0-255  |
+ *     0x01
  *
  *
  *                RESPONSE
@@ -44,8 +45,8 @@ typedef struct management_client {
 
     union {
         struct  auth_parser auth_parser; // For authentication
-        struct  request_parser request_parser; // For management commands
-    };
+        management_command_parser request_parser; // For management commands
+    } management_parser;
 
     bool closed; // Indicates if the connection is closed
     int client_fd; // File descriptor for the client connection

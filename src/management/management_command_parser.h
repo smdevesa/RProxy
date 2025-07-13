@@ -2,9 +2,14 @@
 #define MANAGEMENT_COMMAND_PARSER_H
 
 #include <stdint.h>
+#include <stdbool.h>
+#include "../buffer.h"
 
 #define MANAGEMENT_MAX_ARGS 3
-#define MANAGEMENT_MAX_STRING_LEN = 255 //(0xFF)
+#define MANAGEMENT_MAX_STRING_LEN 0xFF //(0xFF)
+#define MANAGEMENT_COMMAND_MIN 0x00
+#define MANAGEMENT_COMMAND_MAX 0x05 // Total number of commands defined
+#define MANAGEMENT_VERSION 0x01 // Version of the management protocol
 
 typedef enum {
     MANAGEMENT_COMMAND_USERS = 0,
@@ -16,23 +21,21 @@ typedef enum {
 } management_command;
 
 typedef enum {
-    MANAGEMENT_PARSER_PENDING = 0,
-    MANAGEMENT_PARSER_READING,
+    MANAGEMENT_PARSER_VERSION = 0,
+    MANAGEMENT_PARSER_COMMAND,
+    MANAGEMENT_PARSER_PAYLOAD_LEN,
+    MANAGEMENT_PARSER_PAYLOAD,
     MANAGEMENT_PARSER_DONE,
     MANAGEMENT_PARSER_ERROR,
 } management_command_state;
 
 typedef enum {
     MANAGEMENT_SUCCESS = 0,
+    MANAGEMENT_INVALID_VERSION,
     MANAGEMENT_INVALID_COMMAND,
     MANAGEMENT_INVALID_ARGUMENTS,
     MANAGEMENT_INVALID_LENGTH,
 } management_status;
-
-typedef union arg_type  {
-    uint8_t byte;
-    char * string; //Cannot exceed 255
-}arg_type;
 
 typedef struct management_command_parser {
     management_command_state state;
@@ -41,11 +44,54 @@ typedef struct management_command_parser {
 
     uint8_t read_args;
 
-    uint8_t slength; // Lenght to read from a string arg
-    uint8_t rlength; // Already read bytes form a string
-    TArg args[MANAGEMENT_MAX_ARGS]; // Arguments for the command
-
-
+    uint8_t to_read_len; // Pending read
+    uint8_t read_len; // Length of the current argument being read
+    char * args[MANAGEMENT_MAX_ARGS]; // Arguments for the command
 } management_command_parser;
+
+/**
+ * @brief Initializes the management command parser.
+ *
+ * @param parser Pointer to the management command parser structure.
+ */
+void management_command_parser_init(management_command_parser *parser);
+
+/**
+ * @brief Parses the management command from the given buffer.
+ *
+ * @param parser Pointer to the management command parser structure.
+ * @param buf Pointer to the buffer containing the command data.
+ * @return The current state of the parser after processing the command.
+ */
+management_command_state management_command_parser_parse(management_command_parser *parser, struct buffer *buf);
+
+
+/**
+ * @brief Builds a response based on the parser's state and reply code.
+ *
+ * @param parser Pointer to the management command parser structure.
+ * @param buf Pointer to the buffer where the response will be written.
+ * @param reply_code The status code to include in the response.
+ * @return true if the response was successfully built, false otherwise.
+ */
+bool management_parser_build_response(const management_command_parser *parser, struct buffer *buf, management_status reply_code);
+
+/**
+ * @brief Checks if the parser has completed processing the command.
+ *
+ * @param parser Pointer to the management command parser structure.
+ * @return true if the parser has finished, false otherwise.
+ */
+
+bool management_command_parser_is_done(const management_command_parser *parser);
+
+/**
+ * @brief Checks if an error occurred during command parsing.
+ *
+ * @param parser Pointer to the management command parser structure.
+ * @return true if an error occurred, false otherwise.
+ */
+
+bool management_command_parser_has_error(const management_command_parser *parser);
 
 #endif //MANAGEMENT_COMMAND_PARSER_H
