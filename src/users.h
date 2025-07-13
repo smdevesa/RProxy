@@ -43,7 +43,7 @@ bool delete_user(const char *username);
 
 /** checks if the user exists and is an admin
  * Returns true if the user is an admin, false otherwise.
- */e
+ */
 bool users_is_admin(const char *username);
 
 

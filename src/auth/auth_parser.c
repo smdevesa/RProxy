@@ -48,26 +48,49 @@ bool auth_parser_has_error(const auth_parser_t *parser) {
     return parser != NULL && parser->state == AUTH_PARSER_ERROR;
 }
 
+//bool auth_parser_build_response(const auth_parser_t *parser, struct buffer *buf) {
+//    if (!buffer_can_write(buf) || parser == NULL || parser->state != AUTH_PARSER_DONE) {
+//        return false;
+//    }
+//
+//    if (parser->authenticated) {
+//        buffer_write(buf, AUTH_VERSION); // Version
+//        if (!buffer_can_write(buf)) {
+//            return false;
+//        }
+//        buffer_write(buf, 0x00); // Success
+//    } else {
+//        buffer_write(buf, AUTH_VERSION); // Version
+//        if (!buffer_can_write(buf)) {
+//            return false;
+//        }
+//        buffer_write(buf, 0x01); // Failure
+//    }
+//    return true;
+//}
+
 bool auth_parser_build_response(const auth_parser_t *parser, struct buffer *buf) {
     if (!buffer_can_write(buf) || parser == NULL || parser->state != AUTH_PARSER_DONE) {
         return false;
     }
 
-    if (parser->authenticated) {
-        buffer_write(buf, AUTH_VERSION); // Version
-        if (!buffer_can_write(buf)) {
-            return false;
-        }
-        buffer_write(buf, 0x00); // Success
-    } else {
-        buffer_write(buf, AUTH_VERSION); // Version
-        if (!buffer_can_write(buf)) {
-            return false;
-        }
-        buffer_write(buf, 0x01); // Failure
+    buffer_write(buf, AUTH_VERSION); // Version
+
+    if (!buffer_can_write(buf)) {
+        return false;
     }
+
+    uint8_t status;
+    if (parser->authenticated) {
+        status = parser->is_admin ? 0x80 : 0x00; // 0x80 for admin, 0x00 for regular user
+    } else {
+        status = 0x01; // 0x01 for authentication failure
+    }
+
+    buffer_write(buf, status);
     return true;
 }
+
 
 static enum auth_parser_state parse_version(auth_parser_t *parser, uint8_t c) {
     if (c != AUTH_VERSION) {

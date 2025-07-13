@@ -1,24 +1,19 @@
-//
-// Created by Tizifuchi12 on 11/7/2025.
-//
-
 #include "client_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdint.h>
 #include <netdb.h>
 #include <errno.h>
-#include <arpa/inet.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 int connect_to_server_TCP(const char *host, const char *port) {
     struct addrinfo addr;
     struct addrinfo *res = NULL;
     memset(&addr, 0, sizeof(addr));
 
-    addr.ai_family = AF_UNSPEC; // Allow IPv4 or IPv6
+    addr.ai_family = AF_UNSPEC;
     addr.ai_socktype = SOCK_STREAM;
     addr.ai_protocol = IPPROTO_TCP;
 
@@ -31,7 +26,7 @@ int connect_to_server_TCP(const char *host, const char *port) {
     for(struct addrinfo *p = res; p != NULL && socket_fd == -1; p = p->ai_next) {
         socket_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
         if (socket_fd < 0) {
-            continue; //no encontro
+            continue;
         }
 
         if (connect(socket_fd, p->ai_addr, p->ai_addrlen) != 0) {
@@ -39,31 +34,26 @@ int connect_to_server_TCP(const char *host, const char *port) {
             socket_fd = -1;
             continue;
         }
+
+        break;
     }
 
-        freeaddrinfo(res); // Free the linked list of addresses
-        return socket_fd; // Successfully connected
+    freeaddrinfo(res);
+    return socket_fd;
 }
 
-
 bool handshake_socks5(int socket_fd) {
-    uint8_t request[3] = {0x05, 0x01, 0x02};  // VERSION, NMETHODS, METHODS
-    ssize_t sent = send(socket_fd, request, sizeof(request), 0);
-    if (sent != sizeof(request)) {
-        return false;
-    }
+    uint8_t buffer[3] = {0x05, 0x01, 0x02};
+    if (write(socket_fd, buffer, 3) != 3) return false;
 
     uint8_t response[2];
-    ssize_t received = recv(socket_fd, response, sizeof(response), 0);
-    if (received != 2) {
-        return false;
-    }
+    if (read(socket_fd, response, 2) != 2) return false;
 
-    return response[0] == 0x05 && response[1] == 0x02; //es que respondio ok
+    return response[0] == 0x05 && response[1] == 0x02;
 }
 
 bool send_auth_credentials(int socket_fd, const char *user, const char *pass) {
-    uint8_t buffer[513]; // 1 + 1 + 255 + 1 + 255
+    uint8_t buffer[513]; //DESPUES CAMBIR E MAGIC NUMBER
     size_t offset = 0;
 
     size_t user_len = strlen(user);
@@ -81,33 +71,44 @@ bool send_auth_credentials(int socket_fd, const char *user, const char *pass) {
     return write(socket_fd, buffer, offset) == (ssize_t)offset;
 }
 
-bool recv_auth_response(int socket_fd) {
-    uint8_t response[2];
-    ssize_t n = read(socket_fd, response, 2);
-    return (n == 2 && response[0] == 0x01 && response[1] == 0x00);
-}
 
-bool send_connect_request(int socket_fd, const char *ip, uint16_t port) {
-    uint8_t request[10];
-    request[0] = 0x05;  // VER
-    request[1] = 0x01;  // CMD = CONNECT
-    request[2] = 0x00;  // RSV
-    request[3] = 0x01;  // ATYP = IPv4
+struct auth_result recv_auth_response(int socket_fd) {
+    struct auth_result result = { .success = false, .is_admin = false };
 
-    if (inet_pton(AF_INET, ip, &request[4]) != 1) {
-        return false;
+    uint8_t version, status;
+    if (read(socket_fd, &version, 1) != 1) return result;
+    if (read(socket_fd, &status, 1) != 1) return result;
+
+    result.success = (status & 0x7F) == 0x00;
+    result.is_admin = (status & 0x80) != 0;
+
+    if (result.success) {
+        printf("Autenticación exitosa. Rol: %s\n", result.is_admin ? "admin" : "usuario");
+    } else {
+        printf("Autenticación fallida.\n");
     }
 
-    request[8] = (port >> 8) & 0xFF;
-    request[9] = port & 0xFF;
-
-    return write(socket_fd, request, sizeof(request)) == sizeof(request);
+    return result;
 }
 
+
+bool send_connect_request(int socket_fd, const char *ip, uint16_t port) {
+    uint8_t buffer[10];
+    buffer[0] = 0x05; // SOCKS5
+    buffer[1] = 0x01; // CONNECT
+    buffer[2] = 0x00; // Reserved
+    buffer[3] = 0x01; // IPv4
+
+    if (inet_pton(AF_INET, ip, &buffer[4]) != 1) return false;
+
+    buffer[8] = (uint8_t)(port >> 8);
+    buffer[9] = (uint8_t)(port & 0xFF);
+
+    return write(socket_fd, buffer, 10) == 10;
+}
 
 bool recv_connect_response(int socket_fd) {
-    uint8_t response[10];
-    ssize_t n = read(socket_fd, response, sizeof(response));
-    return (n == 10 && response[1] == 0x00);  // REP = 0x00 es exito
+    uint8_t buffer[10];
+    if (read(socket_fd, buffer, 10) != 10) return false;
+    return buffer[1] == 0x00; // 0x00 = succeeded
 }
-

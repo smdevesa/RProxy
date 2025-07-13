@@ -46,13 +46,12 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    if (!recv_auth_response(socket_fd)) {
-        fprintf(stderr, "Autenticación fallida.\n");
+    struct auth_result auth = recv_auth_response(socket_fd);
+    if (!auth.success) {
         close(socket_fd);
         return EXIT_FAILURE;
     }
 
-    printf("Autenticación exitosa.\n");
 
     //esto era para probar el connect, hacer el bucle aca
 
