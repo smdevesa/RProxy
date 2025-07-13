@@ -2,13 +2,8 @@
 
 #include "../auth/auth_parser.h"
 #include "../auth/auth.h"
-#include "../buffer.h"
-#include "../users.h"
-#include "../selector.h"
 #include "../management/management.h"
 #include <sys/socket.h>
-
-#define ATTACHMENT(key) ((struct management_client *)((key)->data))
 
 void management_auth_init(unsigned int state, struct selector_key *key) {
     management_client *data = ATTACHMENT(key);

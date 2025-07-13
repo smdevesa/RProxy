@@ -1,6 +1,8 @@
 #ifndef MANAGEMENT_AUTH_H
 #define MANAGEMENT_AUTH_H
 
+#include "../selector.h"
+
 /*
  *
  *       AUTHENTICATION REQUEST  (RFC 1929)

@@ -26,6 +26,7 @@
 
 #include "management_command_parser.h"
 
+#define ATTACHMENT(key) ((struct management_client *)((key)->data))
 
 #define REQUEST_BUFFER_SIZE 256
 #define RESPONSE_BUFFER_SIZE 256
