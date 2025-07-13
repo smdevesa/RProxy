@@ -37,6 +37,7 @@ struct  client_data {
     char dns_host[256];
     char dns_port[6];
     bool resolution_from_getaddrinfo;
+    bool is_admin;
 };
 
 enum socks5_state {

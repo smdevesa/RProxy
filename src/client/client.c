@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
     printf("Autenticación exitosa.\n");
 
     //esto era para probar el connect, hacer el bucle aca
+
+
     if (!send_connect_request(socket_fd, "142.251.128.46", 80)) {
         fprintf(stderr, "Fallo el envio del connect\n");
         close(socket_fd);

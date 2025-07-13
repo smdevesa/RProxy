@@ -134,3 +134,11 @@ static bool validate_length(const char *string) {
     return length <= MAX_USERNAME_LENGTH && length > 0;
 }
 
+
+bool users_is_admin(const char *username) {
+    int user_idx = find_user(username);
+    if (user_idx == -1) {
+        return false;  // Usuario no encontrado
+    }
+    return users[user_idx].is_admin;
+}

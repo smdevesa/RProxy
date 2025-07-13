@@ -124,6 +124,7 @@ void try_to_authenticate(auth_parser_t *parser) {
         return;
     }
     parser->authenticated = users_login(parser->username, parser->password);
+    parser->is_admin = parser->authenticated && users_is_admin(parser->username);
 }
 
 bool auth_parser_is_authenticated(const auth_parser_t *parser) {
