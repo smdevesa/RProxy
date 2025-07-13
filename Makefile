@@ -11,6 +11,7 @@ AUTH_SOURCES=$(wildcard $(SRC_DIR)/auth/*.c)
 HANDSHAKE_SOURCES=$(wildcard $(SRC_DIR)/handshake/*.c)
 SOCKS5_SOURCES=$(wildcard $(SRC_DIR)/socks5/*.c)
 REQUEST_SOURCES=$(wildcard $(SRC_DIR)/request/*.c)
+CLIENT_SOURCES=$(wildcard $(SRC_DIR)/client/*.c)
 
 # Objetos
 BASE_OBJECTS=$(BASE_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
@@ -18,12 +19,15 @@ AUTH_OBJECTS=$(AUTH_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 HANDSHAKE_OBJECTS=$(HANDSHAKE_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 SOCKS5_OBJECTS=$(SOCKS5_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 REQUEST_OBJECTS=$(REQUEST_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+CLIENT_OBJECTS=$(CLIENT_SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 # Todos los objetos
+ALL_OBJECTS=$(BASE_OBJECTS) $(AUTH_OBJECTS) $(HANDSHAKE_OBJECTS) $(SOCKS5_OBJECTS) $(REQUEST_OBJECTS)
 ALL_OBJECTS=$(BASE_OBJECTS) $(AUTH_OBJECTS) $(HANDSHAKE_OBJECTS) $(SOCKS5_OBJECTS) $(REQUEST_OBJECTS)
 
 # Target principal
 TARGET := $(BIN_DIR)/socks5v
+
 
 all: $(TARGET)
 
@@ -40,3 +44,9 @@ clean:
 	rm -rf $(BIN_DIR)
 
 .PHONY: all clean
+
+CLIENT_TARGET := $(BIN_DIR)/client
+
+client: $(CLIENT_OBJECTS)
+	mkdir -p $(BIN_DIR)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(CLIENT_OBJECTS) -o $(CLIENT_TARGET)

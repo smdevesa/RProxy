@@ -32,7 +32,43 @@ int main(int argc, char *argv[]) {
 
     printf("Connection established with server\n");
 
-    //  handshake, auth, etc.
+
+    if (!handshake_socks5(socket_fd)) {
+        fprintf(stderr, "Error en handshake SOCKS5\n");
+        close(socket_fd);
+        return 1;
+    }
+    printf("Handshake SOCKS5 successful\n");
+
+    if (!send_auth_credentials(socket_fd, username, password)) {
+        fprintf(stderr, "Error enviando credenciales.\n");
+        close(socket_fd);
+        return EXIT_FAILURE;
+    }
+
+    if (!recv_auth_response(socket_fd)) {
+        fprintf(stderr, "Autenticación fallida.\n");
+        close(socket_fd);
+        return EXIT_FAILURE;
+    }
+
+    printf("Autenticación exitosa.\n");
+
+    //esto era para probar el connect, hacer el bucle aca
+    if (!send_connect_request(socket_fd, "142.251.128.46", 80)) {
+        fprintf(stderr, "Fallo el envio del connect\n");
+        close(socket_fd);
+        return EXIT_FAILURE;
+    }
+
+    if (!recv_connect_response(socket_fd)) {
+        fprintf(stderr, "El servidor rechazó la conexión\n");
+        close(socket_fd);
+        return EXIT_FAILURE;
+    }
+    printf("Túnel conectado al destino exitosamente\n");
+
+
 
     close(socket_fd);
     return EXIT_SUCCESS;
