@@ -7,8 +7,6 @@
 
 #define MANAGEMENT_MAX_ARGS 3
 #define MANAGEMENT_MAX_STRING_LEN 0xFF //(0xFF)
-#define MANAGEMENT_COMMAND_MIN 0x00
-#define MANAGEMENT_COMMAND_MAX 0x05 // Total number of commands defined
 #define MANAGEMENT_VERSION 0x01 // Version of the management protocol
 
 typedef enum {
@@ -19,6 +17,9 @@ typedef enum {
     MANAGEMENT_COMMAND_STATS,
     MANAGEMENT_COMMAND_CHANGE_ROLE
 } management_command;
+
+#define MANAGEMENT_COMMAND_MIN MANAGEMENT_COMMAND_USERS // Minimum command value
+#define MANAGEMENT_COMMAND_MAX MANAGEMENT_COMMAND_CHANGE_ROLE // Maximum command value
 
 typedef enum {
     MANAGEMENT_PARSER_VERSION = 0,
@@ -41,12 +42,11 @@ typedef struct management_command_parser {
     management_command_state state;
     management_command command; // Current command being processed
     management_status status; // Status of the command processing
+    uint8_t read_args; // Number of arguments read so far
 
-    uint8_t read_args;
-
-    uint8_t to_read_len; // Pending read
     uint8_t read_len; // Length of the current argument being read
-    char * args[MANAGEMENT_MAX_ARGS]; // Arguments for the command
+    uint8_t to_read_len; // Pending chars to read
+    uint8_t args[MANAGEMENT_MAX_ARGS][MANAGEMENT_MAX_STRING_LEN + 1]; // Arguments for the command
 } management_command_parser;
 
 /**

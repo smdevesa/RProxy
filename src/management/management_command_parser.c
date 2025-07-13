@@ -1,5 +1,6 @@
 #include "management_command_parser.h"
 
+#define DELIMITER ':'
 
 typedef management_command_state (*state_handler)(management_command_parser *, uint8_t);
 
@@ -10,18 +11,13 @@ static management_command_state parse_payload(management_command_parser *parser,
 static management_command_state parse_done(management_command_parser *parser, uint8_t c);
 static management_command_state parse_error(management_command_parser *parser, uint8_t c);
 
-typedef struct command_t{
-    management_command command_id;
-    uint8_t args_count; // Number of arguments expected for this command
-} command_t;
-
-static command_t commands[] = {
-    {.command_id = MANAGEMENT_COMMAND_USERS, .args_count = 0 },
-    {.command_id = MANAGEMENT_COMMAND_ADD_USER, .args_count = 2}, // username, password
-    {.command_id = MANAGEMENT_COMMAND_DELETE_USERS, .args_count = 1}, // username
-    {.command_id = MANAGEMENT_COMMAND_CHANGE_PASSWORD, .args_count = 2}, // username, new_password;
-    {.command_id = MANAGEMENT_COMMAND_STATS, .args_count = 0},
-    {.command_id = MANAGEMENT_COMMAND_CHANGE_ROLE, .args_count = 2}// username, new_role
+static const uint8_t command_args_count[] = {
+        0,  /* MANAGEMENT_COMMAND_USERS */
+        2,  /* MANAGEMENT_COMMAND_ADD_USER */
+        1,  /* MANAGEMENT_COMMAND_DELETE_USERS */
+        2,  /* MANAGEMENT_COMMAND_CHANGE_PASSWORD */
+        0,  /* MANAGEMENT_COMMAND_STATS */
+        2   /* MANAGEMENT_COMMAND_CHANGE_ROLE */
 };
 
 static state_handler state_handlers[] = {
@@ -96,16 +92,52 @@ static management_command_state parse_payload_len(management_command_parser *par
         return MANAGEMENT_PARSER_ERROR;
     }
     parser->to_read_len = c;
-    parser->read_len = 0;
     return MANAGEMENT_PARSER_PAYLOAD;
 }
 
-static management_command_state parse_payload(management_command_parser *parser, uint8_t c){
-    parser->args[parser->read_args]
+static management_command_state parse_payload(management_command_parser *parser, uint8_t c) {
+    if (parser->to_read_len == 0) {
+        if (parser->read_len > 0) {
+            parser->args[parser->read_args][parser->read_len] = '\0';
+            parser->read_args++;
+        }
 
+        if (parser->read_args != command_args_count[parser->command]) {
+            parser->status = MANAGEMENT_INVALID_ARGUMENTS;
+            return MANAGEMENT_PARSER_ERROR;
+        }
+
+        parser->status = MANAGEMENT_SUCCESS;
+        return MANAGEMENT_PARSER_DONE;
+    }
+
+    if (c == DELIMITER) {
+        if (parser->read_len == 0) {
+            parser->status = MANAGEMENT_INVALID_ARGUMENTS;
+            return MANAGEMENT_PARSER_ERROR;
+        }
+
+        parser->args[parser->read_args][parser->read_len] = '\0';
+        parser->read_args++;
+        parser->read_len = 0;
+        parser->to_read_len--;
+        return MANAGEMENT_PARSER_PAYLOAD;
+    }
+
+    if (parser->read_len >= (MANAGEMENT_MAX_STRING_LEN - 1)) {
+        parser->status = MANAGEMENT_INVALID_ARGUMENTS;
+        return MANAGEMENT_PARSER_ERROR;
+    }
+
+    parser->args[parser->read_args][parser->read_len++] = c;
+    parser->to_read_len--;
+    return MANAGEMENT_PARSER_PAYLOAD;
 }
 
+static management_command_state parse_done(management_command_parser *parser, uint8_t c) {
+    return MANAGEMENT_PARSER_DONE;
+}
 
-
-
-
+static management_command_state parse_error(management_command_parser *parser, uint8_t c) {
+    return MANAGEMENT_PARSER_ERROR;
+}

@@ -90,14 +90,10 @@ static enum handshake_parser_state parse_methods(handshake_parser_t *parser, uin
 }
 
 static enum handshake_parser_state parse_done(handshake_parser_t *parser, uint8_t c) {
-    // This state should not receive any more data
-    c += 0;
     return HANDSHAKE_PARSER_DONE;
 }
 
 static enum handshake_parser_state parse_error(handshake_parser_t *parser, uint8_t c) {
-    // This state should not receive any more data
-    c += 0;
     return HANDSHAKE_PARSER_ERROR;
 }
 
