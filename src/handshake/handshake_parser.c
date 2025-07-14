@@ -1,5 +1,6 @@
 #include "handshake_parser.h"
 #include <stdint.h>
+#include "../config.h"
 
 #define SOCKS5_VERSION 0x05
 
@@ -76,8 +77,9 @@ static enum handshake_parser_state parse_nmethod(handshake_parser_t *parser, uin
 }
 
 static enum handshake_parser_state parse_methods(handshake_parser_t *parser, uint8_t c) {
-    if (c == USER_PASS) {
-        parser->selected_method = USER_PASS;
+    enum auth_methods default_method = get_default_auth_method();
+    if (c == default_method) {
+        parser->selected_method = default_method;
     }
     else if (c == NO_AUTH && parser->selected_method == NO_ACCEPTABLE) {
         parser->selected_method = NO_AUTH;
