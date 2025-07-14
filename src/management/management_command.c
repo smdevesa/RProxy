@@ -83,7 +83,7 @@ static void add_user_command_handler(struct management_command_parser *parser,
     if (parser->read_args != 2) {
         management_command_parser_build_response(parser, response_buffer,
                                                  MANAGEMENT_INVALID_ARGUMENTS,
-                                                 "add_user: missing arguments");
+                                                 "add_user: invalid argument count, expected 2");
         return;
     }
 
@@ -107,6 +107,33 @@ static void add_user_command_handler(struct management_command_parser *parser,
     management_command_parser_build_response(parser, response_buffer,
                                              MANAGEMENT_SERVER_ERROR,
                                              "add_user: failed to add user");
+}
+
+static void delete_users_command_handler(struct management_command_parser *parser,
+                                         struct buffer *response_buffer) {
+    if (parser->read_args != 1) {
+        management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "delete_users: invalid argument count, expected 1");
+        return;
+    }
+
+    const char *username = (const char *)parser->args[0];
+    if (!exists_user(username)) {
+        management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_USER_NOT_FOUND,
+                                                 "delete_users: user not found");
+        return;
+    }
+    if (delete_user(username)) {
+        management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_SUCCESS,
+                                                 "delete_users: user deleted successfully");
+        return;
+    }
+    management_command_parser_build_response(parser, response_buffer,
+                                             MANAGEMENT_SERVER_ERROR,
+                                             "delete_users: failed to delete user");
 }
 
 static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer) {
