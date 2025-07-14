@@ -11,15 +11,27 @@
 
 // Maximum number of users that can be stored
 #define MAX_USERS 128
+#define MAX_ACCESS_LOGS 100
+#define MAX_IP_OR_SITE_LENGTH 64
 
 // Default admin user.
 #define DEFAULT_ADMIN_USERNAME "admin"
 #define DEFAULT_ADMIN_PASSWORD "1234"
 
+struct access_log_t {
+    char ip_or_site[MAX_IP_OR_SITE_LENGTH + 1]; // +1 for null terminated
+    uint32_t timestamp; // Timestamp of the action
+};
+
 struct user_t {
     char name[MAX_USERNAME_LENGTH + 1]; // +1 for null terminated
     char pass[MAX_PASSWORD_LENGTH + 1]; // +1 for null terminated
     bool is_admin;
+
+    //Registro de accesos
+    struct access_log_t access_logs[MAX_ACCESS_LOGS];
+    size_t access_log_count; // Number of access logs
+    size_t current_access_log_index; // Current index for adding new logs
 };
 
 //Initialize user system
@@ -78,6 +90,21 @@ bool change_user_password(const char *username, const char *new_password);
  */
 bool change_user_role(const char *username, bool is_admin);
 
+/**
+ * Registra un nuevo acceso para el usuario especificado
+ * @param username Nombre del usuario
+ * @param ip_or_site IP o sitio al que accedió
+ * @return true si se registró correctamente, false en caso contrario
+ */
+bool register_user_access(const char *username, const char *ip_or_site);
 
+/**
+ * Obtiene el historial de accesos de un usuario
+ * @param username Nombre del usuario
+ * @param logs Buffer donde se copiarán los logs
+ * @param max_logs Tamaño máximo del buffer
+ * @return Número de registros copiados
+ */
+size_t get_user_access_history(const char *username, struct access_log_t *logs, size_t max_logs);
 
 #endif //USERS_H

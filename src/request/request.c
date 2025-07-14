@@ -10,7 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <arpa/inet.h>
+
 #include "dns_resolver.h"
+#include "../users.h"
+
 
 static unsigned analyze_request(struct selector_key *key);
 static unsigned start_connection(struct selector_key *key);
@@ -223,14 +227,43 @@ static unsigned start_connection(struct selector_key *key) {
             if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
                 return ERROR;
             }
+            if (data->username[0] != '\0') {
+                char ip_str[INET6_ADDRSTRLEN]; // Buffer suficientemente grande para IPv4 o IPv6
+
+                // Convertir la dirección IP a string dependiendo de la familia
+                if (data->origin_addrinfo->ai_family == AF_INET) {
+                    // IPv4
+                    struct sockaddr_in *addr = (struct sockaddr_in*)data->origin_addrinfo->ai_addr;
+                    inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
+
+                    // Añadir el puerto para más detalle
+                    char full_addr[INET6_ADDRSTRLEN + 8]; // Extra para el puerto
+                    snprintf(full_addr, sizeof(full_addr), "%s:%d", ip_str, ntohs(addr->sin_port));
+
+                    if (!data->access_registered) {
+                        register_user_access(data->username, full_addr);
+                        data->access_registered = true;
+                    }                } else if (data->origin_addrinfo->ai_family == AF_INET6) {
+                    // IPv6
+                    struct sockaddr_in6 *addr = (struct sockaddr_in6*)data->origin_addrinfo->ai_addr;
+                    inet_ntop(AF_INET6, &(addr->sin6_addr), ip_str, INET6_ADDRSTRLEN);
+
+                    // Añadir el puerto para IPv6
+                    char full_addr[INET6_ADDRSTRLEN + 8];
+                    snprintf(full_addr, sizeof(full_addr), "[%s]:%d", ip_str, ntohs(addr->sin6_port));
+                    if (!data->access_registered) {
+                        register_user_access(data->username, full_addr);
+                        data->access_registered = true;
+                    }                }
+            }
             return REQUEST_CONNECT; // Connection in progress
         } else {
             handle_error(key, data, REQUEST_REPLY_CONNECTION_REFUSED);
             return REQUEST_WRITE;
         }
     }
+    //Connection successful
 
-    // Connection successful
     request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS);
     if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
         return ERROR;
@@ -253,5 +286,9 @@ unsigned request_dns(struct selector_key *key) {
     data->dns_req.ar_result = NULL;
     data->resolution_from_getaddrinfo = true;
 
+    if (!data->access_registered && data->username[0] != '\0') {
+        register_user_access(data->username, data->dns_host);
+        data->access_registered = true;
+    }
     return start_connection(key);
 }

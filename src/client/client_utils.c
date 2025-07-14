@@ -106,6 +106,7 @@ uint8_t get_command_code(const char *option) {
     if (strcmp(option, "CHANGE_PASSWORD") == 0) return 0x03;
     if (strcmp(option, "STATS") == 0) return 0x04;
     if (strcmp(option, "CHANGE_ROLE") == 0) return 0x05;
+    if (strcmp(option, "VIEW_ACTIVITY_LOG") == 0) return 0x06;
 
     return INVALID_COMMAND;
 }

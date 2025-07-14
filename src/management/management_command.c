@@ -5,6 +5,7 @@
 #include "../users.h"
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <sys/socket.h>
 
 static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer, bool is_admin);
@@ -17,6 +18,7 @@ static bool delete_users_command_handler(struct management_command_parser *parse
 static bool change_password_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
 static bool stats_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
 static bool change_role_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
+static bool view_activity_log_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
 
 static management_command_handler command_handlers[] = {
     (management_command_handler) users_command_handler,
@@ -24,7 +26,8 @@ static management_command_handler command_handlers[] = {
     (management_command_handler) delete_users_command_handler,
     (management_command_handler) change_password_command_handler,
     (management_command_handler) stats_command_handler,
-    (management_command_handler) change_role_command_handler
+    (management_command_handler) change_role_command_handler,
+    (management_command_handler) view_activity_log_command_handler
 };
 
 static bool needs_admin_privileges[] = {
@@ -33,7 +36,8 @@ static bool needs_admin_privileges[] = {
     true,  // MANAGEMENT_COMMAND_DELETE_USERS
     true,  // MANAGEMENT_COMMAND_CHANGE_PASSWORD
     false, // MANAGEMENT_COMMAND_STATS
-    true   // MANAGEMENT_COMMAND_CHANGE_ROLE
+    true,   // MANAGEMENT_COMMAND_CHANGE_ROLE
+    true   // MANAGEMENT_COMMAND_VIEW_ACTIVITY_LOG
 };
 
 void management_command_read_init(unsigned state, struct selector_key *key) {
@@ -292,6 +296,71 @@ static bool stats_command_handler(struct management_command_parser *parser, stru
     if (!management_command_parser_build_response(parser, response_buffer,
                                                   MANAGEMENT_SUCCESS, NULL)) {
         return false;
+    }
+
+    size_t available;
+    uint8_t *ptr = buffer_write_ptr(response_buffer, &available);
+    if ((size_t)response_len > available) return false;
+
+    memcpy(ptr, response, response_len);
+    buffer_write_adv(response_buffer, response_len);
+
+    return true;
+}
+
+static bool view_activity_log_command_handler(struct management_command_parser *parser, struct buffer *response_buffer) {
+    if (parser->read_args != 1) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "view_activity_log: invalid argument count, expected 1");
+    }
+
+    const char *username = (const char *)parser->args[0];
+
+    if (!exists_user(username)) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_USER_NOT_FOUND,
+                                                 "view_activity_log: user not found");
+    }
+
+    struct access_log_t logs[MAX_ACCESS_LOGS];
+    size_t total_logs = get_user_access_history(username, logs, MAX_ACCESS_LOGS);
+
+    if (total_logs == 0) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                             MANAGEMENT_SERVER_ERROR,
+                                             "view_activity_log: No activity logs found for user");
+    }
+
+    if (!management_command_parser_build_response(parser, response_buffer,
+                                                  MANAGEMENT_SUCCESS, NULL)) {
+        return false;
+    }
+
+    char response[1024];
+    int response_len = 0;
+
+    // Escribir encabezado
+    response_len += snprintf(response + response_len, sizeof(response) - response_len,
+                  "Historial de accesos para %s (%zu registros):\n", username, total_logs);
+
+    // Formatear cada registro
+    for (size_t i = 0; i < total_logs && response_len < (int)sizeof(response) - 1; i++) {
+        char time_str[64];
+
+        // Corregir la conversión del timestamp
+        time_t timestamp = (time_t)logs[i].timestamp;  // Conversión directa sin usar puntero
+        struct tm *tm_info = localtime(&timestamp);
+
+        if (tm_info != NULL) {
+            strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
+            response_len += snprintf(response + response_len, sizeof(response) - response_len,
+                          "%s - %s\n", time_str, logs[i].ip_or_site);
+        } else {
+            // Manejo de timestamp inválido
+            response_len += snprintf(response + response_len, sizeof(response) - response_len,
+                          "[Fecha inválida] - %s\n", logs[i].ip_or_site);
+        }
     }
 
     size_t available;
