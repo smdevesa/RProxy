@@ -17,7 +17,7 @@ static void print_version() {
 static void print_command_info() {
     printf("Available commands:\n");
     for (size_t i = 0; i < COMMANDS_COUNT; ++i) {
-        printf("  %-22s %d args %s\n",
+        printf("  %-25s %d args %s\n",
                commands[i].name,
                commands[i].argc_expected,
                commands[i].needs_admin ? "(admin only)" : "");
@@ -25,9 +25,8 @@ static void print_command_info() {
 }
 
 static void print_help(char * name) {
-    printf("Usage: %s <host> <port> <username> <password> OPTION\n", name);
-    printf("You can use * to use default values of host and port.\n");
-    printf("Available options:\n");
+    printf("Usage: %s <host> <port> <username> <password> COMMAND [args]\n", name);
+    printf("You can use $ to use default values of host and port.\n");
     print_command_info();
 }
 
@@ -72,8 +71,8 @@ int main(int argc, char *argv[]) {
     uint8_t command_code = info->code;
 
 
-    const char *host     = (strcmp(argv[1], "*") == 0) ? HOST_DEFAULT : argv[1];
-    const char *port     = (strcmp(argv[2], "*") == 0) ? PORT_DEFAULT : argv[2];
+    const char *host     = (strcmp(argv[1], "$") == 0) ? HOST_DEFAULT : argv[1];
+    const char *port     = (strcmp(argv[2], "$") == 0) ? PORT_DEFAULT : argv[2];
     const char *username = argv[3];
     const char *password = argv[4];
 

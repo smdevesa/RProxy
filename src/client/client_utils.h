@@ -20,7 +20,7 @@ static const command_info_t commands[] = {
         { "STATS",           0x04, 0, 0 },
         { "CHANGE_ROLE",     0x05, 2, 1 },
         {"SET_DEFAULT_AUTH_METHOD", 0x06, 1, 1 },
-        {"GET_DEFAULT_AUTH_METHOD", 0x07, 1, 1 },
+        {"GET_DEFAULT_AUTH_METHOD", 0x07, 0, 1 },
 };
 
 #define COMMANDS_COUNT (sizeof(commands) / sizeof(commands[0]))
