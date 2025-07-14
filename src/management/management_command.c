@@ -1,6 +1,7 @@
 #include "management_command.h"
 #include "management.h"
 #include "management_command_parser.h"
+#include "../metrics/metrics.h"
 #include "../users.h"
 #include <stdio.h>
 #include <string.h>
@@ -18,12 +19,12 @@ static bool stats_command_handler(struct management_command_parser *parser, stru
 static bool change_role_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
 
 static management_command_handler command_handlers[] = {
-    users_command_handler,
-    add_user_command_handler,
-    delete_users_command_handler,
-    change_password_command_handler,
-    stats_command_handler,
-    change_role_command_handler
+    (management_command_handler) users_command_handler,
+    (management_command_handler) add_user_command_handler,
+    (management_command_handler) delete_users_command_handler,
+    (management_command_handler) change_password_command_handler,
+    (management_command_handler) stats_command_handler,
+    (management_command_handler) change_role_command_handler
 };
 
 static bool needs_admin_privileges[] = {
@@ -61,9 +62,7 @@ int management_command_read(struct selector_key *key) {
             return MANAGEMENT_ERROR;
         }
 
-        if (!management_process_command(&data->management_parser.request_parser,
-                                        &data->response_buffer),
-                                                data->is_admin) {
+        if (!management_process_command(&data->management_parser.request_parser, &data->response_buffer,data->is_admin)) {
             return MANAGEMENT_ERROR;
         }
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS)
@@ -260,4 +259,40 @@ static bool management_process_command(struct management_command_parser *parser,
 
         return command_handlers[parser->command](parser, resp);
     }
+}
+
+static bool stats_command_handler(struct management_command_parser *parser, struct buffer *response_buffer) {
+    if (parser->read_args != 0) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "stats: invalid argument count, expected 0");
+    }
+
+    metrics_data_t metrics_data;
+    get_metrics_data(&metrics_data);
+
+    char response[256];
+    int response_len = snprintf(response, sizeof(response),
+                                "Current connections: %zu\n"
+                                "Total connections: %zu\n"
+                                "Bytes sent: %zu\n"
+                                "Bytes received: %zu\n",
+                                metrics_data.current_connections,
+                                metrics_data.total_connections,
+                                metrics_data.bytes_sent,
+                                metrics_data.bytes_received);
+
+    if (!management_command_parser_build_response(parser, response_buffer,
+                                                  MANAGEMENT_SUCCESS, NULL)) {
+        return false;
+    }
+
+    size_t available;
+    uint8_t *ptr = buffer_write_ptr(response_buffer, &available);
+    if ((size_t)response_len > available) return false;
+
+    memcpy(ptr, response, response_len);
+    buffer_write_adv(response_buffer, response_len);
+
+    return true;
 }
