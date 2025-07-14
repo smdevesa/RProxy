@@ -25,6 +25,9 @@
  */
 
 #include "management_command_parser.h"
+#include "../auth/auth_parser.h"
+#include "../selector.h"
+#include "../stm.h"
 
 #define ATTACHMENT(key) ((struct management_client *)((key)->data))
 
@@ -32,8 +35,7 @@
 #define RESPONSE_BUFFER_SIZE 8196
 
 typedef enum {
-    MANAGEMENT_AUTH = 0,
-    MANAGEMENT_AUTH_READ,
+    MANAGEMENT_AUTH_READ = 0,
     MANAGEMENT_AUTH_WRITE,
     MANAGEMENT_REQUEST_READ,
     MANAGEMENT_REQUEST_WRITE,
@@ -42,7 +44,7 @@ typedef enum {
 } management_state;
 
 typedef struct management_client {
-    struct state_machine *sm;
+    struct state_machine sm;
 
     union {
         struct  auth_parser auth_parser; // For authentication
@@ -62,6 +64,6 @@ typedef struct management_client {
 
 } management_client;
 
-void management_passive_accept(struct selector_key *key);
+void management_v1_passive_accept(struct selector_key *key);
 
 #endif //MANAGEMENT_H

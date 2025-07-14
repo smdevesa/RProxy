@@ -36,12 +36,12 @@ static bool needs_admin_privileges[] = {
     true   // MANAGEMENT_COMMAND_CHANGE_ROLE
 };
 
-void management_command_read_init(struct selector_key *key) {
+void management_command_read_init(unsigned state, struct selector_key *key) {
     struct management_client *data = ATTACHMENT(key);
     management_command_parser_init(&data->management_parser.request_parser);
 }
 
-int management_command_read(struct selector_key *key) {
+unsigned management_command_read(struct selector_key *key) {
     struct management_client *data = ATTACHMENT(key);
 
     size_t read_limit;
@@ -74,7 +74,7 @@ int management_command_read(struct selector_key *key) {
     return MANAGEMENT_REQUEST_READ;
 }
 
-int management_command_write(struct selector_key *key) {
+unsigned management_command_write(struct selector_key *key) {
     struct management_client *data = ATTACHMENT(key);
 
     size_t write_limit;
