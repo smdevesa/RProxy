@@ -145,3 +145,49 @@ bool users_is_admin(const char *username) {
 bool exists_user(const char *username) {
     return find_user(username) != -1;
 }
+
+size_t users_dump_usernames(uint8_t *dst, size_t dst_len) {
+    size_t written = 0;
+
+    for (int i = 0; i < user_count; i++) {
+        const char *name = users[i].name;
+        size_t len = strlen(name);
+
+        if (written + len + 1 > dst_len) {
+            break;
+        }
+
+        memcpy(dst + written, name, len);
+        written += len;
+
+        dst[written++] = '\n'; // separador
+    }
+
+    return written;
+}
+
+size_t users_get_count() {
+    return user_count;
+}
+
+bool change_user_password(const char *username, const char *new_password) {
+    int user_idx = find_user(username);
+    if (user_idx == -1) {
+        return false;
+    }
+    if (!validate_length(new_password)) {
+        return false;
+    }
+    strncpy(users[user_idx].pass, new_password, MAX_PASSWORD_LENGTH);
+    users[user_idx].pass[MAX_PASSWORD_LENGTH] = '\0';
+    return true;
+}
+
+bool change_user_role(const char *username, bool is_admin) {
+    int user_idx = find_user(username);
+    if (user_idx == -1) {
+        return false;
+    }
+    users[user_idx].is_admin = is_admin;
+    return true;
+}

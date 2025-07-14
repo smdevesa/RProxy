@@ -2,6 +2,8 @@
 #include "management.h"
 #include "management_command_parser.h"
 #include "../users.h"
+#include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 
 static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer);
@@ -136,6 +138,101 @@ static bool delete_users_command_handler(struct management_command_parser *parse
     return management_command_parser_build_response(parser, response_buffer,
                                              MANAGEMENT_SERVER_ERROR,
                                              "delete_users: failed to delete user");
+}
+
+static bool users_command_handler(struct management_command_parser *parser,
+                                  struct buffer *response_buffer) {
+    if(parser->read_args != 0) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "users: invalid argument count, expected 0");
+    }
+
+    char header[64];
+    int user_count = users_get_count();
+    int header_len = snprintf(header, sizeof(header), "users count: %d\n", user_count);
+
+    if (!management_command_parser_build_response(parser, response_buffer,
+                                                  MANAGEMENT_SUCCESS, NULL)) {
+        return false;
+    }
+
+    size_t available;
+    uint8_t *ptr = buffer_write_ptr(response_buffer, &available);
+
+    if ((size_t)header_len > available) return false;
+    memcpy(ptr, header, header_len);
+    buffer_write_adv(response_buffer, header_len);
+
+    ptr = buffer_write_ptr(response_buffer, &available);
+    size_t written = users_dump_usernames(ptr, available);
+    if (written == 0) return false;
+
+    buffer_write_adv(response_buffer, written);
+    return true;
+}
+
+static bool change_password_command_handler(struct management_command_parser *parser,
+                                            struct buffer *response_buffer) {
+    if (parser->read_args != 2) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "change_password: invalid argument count, expected 2");
+    }
+
+    const char *username = (const char *)parser->args[0];
+    const char *new_password = (const char *)parser->args[1];
+
+    if (!exists_user(username)) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_USER_NOT_FOUND,
+                                                 "change_password: user not found");
+    }
+
+    if (!change_user_password(username, new_password)) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                             MANAGEMENT_SERVER_ERROR,
+                                             "change_password: failed to change password");
+    }
+
+    return management_command_parser_build_response(parser, response_buffer,
+                                             MANAGEMENT_SUCCESS,
+                                             "change_password: password changed successfully");
+}
+
+static bool change_role_command_handler(struct management_command_parser *parser,
+                                            struct buffer *response_buffer) {
+    if (parser->read_args != 2) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "change_role: invalid argument count, expected 2");
+    }
+
+    const char *username = (const char *)parser->args[0];
+    const char *role_str = (const char *)parser->args[1];
+
+    if (!exists_user(username)) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_USER_NOT_FOUND,
+                                                 "change_role: user not found");
+    }
+
+    bool is_admin = strcmp(role_str, "admin") == 0;
+    if (!is_admin && strcmp(role_str, "user") != 0) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ROLE,
+                                                 "change_role: invalid role, expected 'admin' or 'user'");
+    }
+
+    if (!change_user_role(username, is_admin)) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                             MANAGEMENT_SERVER_ERROR,
+                                             "change_role: failed to change role");
+    }
+
+    return management_command_parser_build_response(parser, response_buffer,
+                                             MANAGEMENT_SUCCESS,
+                                             "change_role: role changed successfully");
 }
 
 static bool management_process_command(struct management_command_parser *parser,
