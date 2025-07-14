@@ -6,6 +6,7 @@
 #include "../stm.h"
 #include "../handshake/handshake.h"
 #include "../auth/auth.h"
+#include "../metrics/metrics.h"
 #include "../request/request.h"
 
 // Forward declarations of state handlers
@@ -120,6 +121,7 @@ void socks_v5_passive_accept(struct selector_key *key) {
         close(new_client_fd);
         return;
     }
+    metrics_register_new_connection();
 }
 
 void close_connection(struct selector_key *key) {
@@ -129,6 +131,7 @@ void close_connection(struct selector_key *key) {
     }
     data->closed = true;
     printf("Closing connection: fd=%d\n", data->client_fd);
+    metrics_register_disconnect();
 
     if (data->client_fd >= 0) {
         selector_unregister_fd(key->s, data->client_fd);

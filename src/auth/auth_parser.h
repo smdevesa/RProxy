@@ -27,6 +27,7 @@ typedef struct auth_parser {
     uint8_t total_bytes_to_read;                 // Total bytes expected to read in the current state
     uint8_t bytes_read;                          // Bytes read so far in the current state
     bool authenticated;                          // Flag indicating if the user is authenticated
+    bool is_admin;                              // Flag indicating if the user is an admin
 } auth_parser_t;
 
 /**

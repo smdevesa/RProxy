@@ -30,6 +30,7 @@ unsigned auth_read(struct selector_key *key) {
         }
 
         try_to_authenticate(p);
+        data->is_admin = p->is_admin;
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || !auth_parser_build_response(p, &data->origin_buffer)) {
             return ERROR;
         }

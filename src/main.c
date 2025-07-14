@@ -15,19 +15,22 @@
 #include "args.h"
 #include <sys/select.h>
 #include "users.h"
+#include "management/management.h"
+#include "metrics/metrics.h"
+
 
 #define MAX_CLIENTS  FD_SETSIZE
 #define MAX_PENDING 20 // Número máximo de conexiones pendientes
 
 static int setup_sock_addr(char *addr, unsigned short port, void *result, socklen_t *result_len) {
     int ipv6 = strchr(addr, ':') != NULL;
+
     if(ipv6) {
         struct sockaddr_in6 sock_ipv6;
         memset(&sock_ipv6, 0, sizeof(sock_ipv6));
         sock_ipv6.sin6_family = AF_INET6;
         sock_ipv6.sin6_port = htons(port);
         if(inet_pton(AF_INET6, addr, &sock_ipv6.sin6_addr) <= 0) {
-            fprintf(stderr, "Dirección IPv6 inválida: %s\n", addr);
             return -1;
         }
         *(struct sockaddr_in6 *)result = sock_ipv6;
@@ -52,9 +55,9 @@ int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0); // Desactivar buffering de stdout
     setvbuf(stderr, NULL, _IONBF, 0); // Desactivar buffering de stderr
     close(STDIN_FILENO);                    // Cerrar stdin para evitar bloqueos
+
     printf("BIENVENIDOS AL SERVIDOR RPROXY\n");
 
-    users_init();
     printf("Usuario por defecto creado: %s\n", DEFAULT_ADMIN_USERNAME);
 
     // Creacion del selector
@@ -76,6 +79,8 @@ int main(int argc, char *argv[]) {
         selector_close();
         exit(1);
     }
+    metrics_init();
+    users_init();
 
     struct socks5args args;
     parse_args(argc, argv, &args);
@@ -115,12 +120,57 @@ int main(int argc, char *argv[]) {
             .handle_read = socks_v5_passive_accept
     };
     ss = selector_register(selector, server, &socks_v5, OP_READ, NULL);
+
     if(ss != SELECTOR_SUCCESS) {
         fprintf(stderr, "Error al registrar el socket del servidor SOCKS: %s\n", selector_error(ss));
         goto finally;
     }
 
     printf("Servidor SOCKS5 escuchando en %s:%d\n", args.socks_addr, args.socks_port);
+
+    int mng_server = -1;
+    struct sockaddr_storage mng_sock_addr;
+    socklen_t mng_sock_len = sizeof(mng_sock_addr);
+    memset(&mng_sock_addr, 0, sizeof(mng_sock_addr));
+
+    if (setup_sock_addr(args.mng_addr, args.mng_port, &mng_sock_addr, &mng_sock_len) < 0) {
+        fprintf(stderr, "Error al configurar el socket de management\n");
+        goto finally;
+    }
+
+    mng_server = socket(mng_sock_addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
+    if (mng_server < 0) {
+        perror("socket management");
+        goto finally;
+    }
+
+    setsockopt(mng_server, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+    if (bind(mng_server, (struct sockaddr *)&mng_sock_addr, mng_sock_len) < 0) {
+        perror("bind management");
+        goto finally;
+    }
+
+    if (listen(mng_server, MAX_PENDING) < 0) {
+        perror("listen management");
+        goto finally;
+    }
+
+    if (selector_fd_set_nio(mng_server) < 0) {
+        perror("selector_fd_set_nio management");
+        goto finally;
+    }
+
+    const fd_handler mng_handler = {
+        .handle_read = management_v1_passive_accept,
+    };
+
+    ss = selector_register(selector, mng_server, &mng_handler, OP_READ, NULL);
+    if (ss != SELECTOR_SUCCESS) {
+        fprintf(stderr, "Error al registrar el socket de management: %s\n", selector_error(ss));
+        goto finally;
+    }
+
+    printf("Servidor de management escuchando en %s:%d\n", args.mng_addr, args.mng_port);
     while(true) {
         ss = selector_select(selector);
         if(ss != SELECTOR_SUCCESS) {
@@ -132,6 +182,9 @@ int main(int argc, char *argv[]) {
     finally:
     if(server >= 0) {
         close(server);
+    }
+    if (mng_server >= 0) {
+        close(mng_server);
     }
     if(selector != NULL) {
         selector_destroy(selector);

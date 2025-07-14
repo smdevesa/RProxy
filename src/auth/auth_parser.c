@@ -69,6 +69,7 @@ bool auth_parser_build_response(const auth_parser_t *parser, struct buffer *buf)
     return true;
 }
 
+
 static enum auth_parser_state parse_version(auth_parser_t *parser, uint8_t c) {
     if (c != AUTH_VERSION) {
         return AUTH_PARSER_ERROR;
@@ -124,6 +125,7 @@ void try_to_authenticate(auth_parser_t *parser) {
         return;
     }
     parser->authenticated = users_login(parser->username, parser->password);
+    parser->is_admin = parser->authenticated && users_is_admin(parser->username);
 }
 
 bool auth_parser_is_authenticated(const auth_parser_t *parser) {

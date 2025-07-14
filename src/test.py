@@ -52,7 +52,7 @@ def test_proxy_external():
     print(f"Handshake response: {response.hex()}")
 
     print("Enviando autenticación...")
-    sock.sendall(b'\x01\x05admin\x05admin')
+    sock.sendall(b'\x01\x05admin\x041234')
     response = sock.recv(2)
     print(f"Auth response: {response.hex()}")
 
