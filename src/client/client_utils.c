@@ -42,73 +42,83 @@ int connect_to_server_TCP(const char *host, const char *port) {
     return socket_fd;
 }
 
-bool handshake_socks5(int socket_fd) {
-    uint8_t buffer[3] = {0x05, 0x01, 0x02};
-    if (write(socket_fd, buffer, 3) != 3) return false;
+bool send_auth_credentials(int fd, const char *username, const char *password) {
+    uint8_t version = 0x01;
+    uint8_t user_len = strlen(username);
+    uint8_t pass_len = strlen(password);
+    uint8_t buffer[2 + 255 + 1 + 255];
 
-    uint8_t response[2];
-    if (read(socket_fd, response, 2) != 2) return false;
-
-    return response[0] == 0x05 && response[1] == 0x02;
-}
-
-bool send_auth_credentials(int socket_fd, const char *user, const char *pass) {
-    uint8_t buffer[CREDENTIAL_SIZE];
     size_t offset = 0;
-
-    size_t user_len = strlen(user);
-    size_t pass_len = strlen(pass);
-    if (user_len > 255 || pass_len > 255) return false;
-
-    buffer[offset++] = 0x01;           // Version
-    buffer[offset++] = (uint8_t)user_len;
-    memcpy(&buffer[offset], user, user_len);
+    buffer[offset++] = version;
+    buffer[offset++] = user_len;
+    memcpy(buffer + offset, username, user_len);
     offset += user_len;
-    buffer[offset++] = (uint8_t)pass_len;
-    memcpy(&buffer[offset], pass, pass_len);
+    buffer[offset++] = pass_len;
+    memcpy(buffer + offset, password, pass_len);
     offset += pass_len;
 
-    return write(socket_fd, buffer, offset) == (ssize_t)offset;
+    return send(fd, buffer, offset, 0) == (ssize_t)offset;
 }
 
+bool recv_auth_response(int fd) {
+    uint8_t resp[2];
+    ssize_t r = recv(fd, resp, 2, 0);
+    return r == 2 && resp[0] == 0x01 && resp[1] == 0x00;
+}
 
-auth_result recv_auth_response(int socket_fd) {
-    auth_result result = { .success = false, .is_admin = false };
+bool send_management_command(int fd, uint8_t cmd, const char *args) {
+    uint8_t version = 0x01;
+    uint8_t len = args ? strlen(args) : 0;
 
-    uint8_t version, status;
-    if (read(socket_fd, &version, 1) != 1) return result;
-    if (read(socket_fd, &status, 1) != 1) return result;
-
-    result.success = (status & 0x7F) == 0x00;
-    result.is_admin = (status & 0x80) != 0;
-
-    if (result.success) {
-        printf("Autenticación exitosa. Rol: %s\n", result.is_admin ? "admin" : "usuario");
-    } else {
-        printf("Autenticación fallida.\n");
+    uint8_t buffer[3 + 255];
+    buffer[0] = version;
+    buffer[1] = cmd;
+    buffer[2] = len;
+    if (args && len > 0) {
+        memcpy(buffer + 3, args, len);
     }
 
-    return result;
+    return send(fd, buffer, 3 + len, 0) == (ssize_t)(3 + len);
 }
 
+bool recv_management_response(int fd, char *output, size_t max_len) {
+    uint8_t header[2];
+    ssize_t r = recv(fd, header, 2, 0);
+    if (r != 2 || header[0] != 0x01 || header[1] != 0x00) {
+        return false;
+    }
 
-bool send_connect_request(int socket_fd, const char *ip, uint16_t port) {
-    uint8_t buffer[10];
-    buffer[0] = 0x05; // SOCKS5
-    buffer[1] = 0x01; // CONNECT
-    buffer[2] = 0x00; // Reserved
-    buffer[3] = 0x01; // IPv4
-
-    if (inet_pton(AF_INET, ip, &buffer[4]) != 1) return false;
-
-    buffer[8] = (uint8_t)(port >> 8);
-    buffer[9] = (uint8_t)(port & 0xFF);
-
-    return write(socket_fd, buffer, 10) == 10;
+    size_t received = 0;
+    while (received < max_len - 1) {
+        char c;
+        ssize_t n = recv(fd, &c, 1, 0);
+        if (n <= 0 || c == '\0') break;
+        output[received++] = c;
+    }
+    output[received] = '\0';
+    return true;
 }
 
-bool recv_connect_response(int socket_fd) {
-    uint8_t buffer[10];
-    if (read(socket_fd, buffer, 10) != 10) return false;
-    return buffer[1] == 0x00; // 0x00 = succeeded
+uint8_t get_command_code(const char *option) {
+    if (strcmp(option, "USERS") == 0) return 0x00;
+    if (strcmp(option, "ADD_USER") == 0) return 0x01;
+    if (strcmp(option, "DELETE_USER") == 0) return 0x02;
+    if (strcmp(option, "CHANGE_PASSWORD") == 0) return 0x03;
+    if (strcmp(option, "STATS") == 0) return 0x04;
+    if (strcmp(option, "CHANGE_ROLE") == 0) return 0x05;
+
+    return INVALID_COMMAND;
+}
+
+size_t build_payload_string(char *dest, int argc, char *argv[], int start_index) {
+    dest[0] = '\0';
+
+    for (int i = start_index; i < argc; i++) {
+        strcat(dest, argv[i]);
+        if (i < argc - 1) {
+            strcat(dest, ":");
+        }
+    }
+
+    return strlen(dest);
 }
