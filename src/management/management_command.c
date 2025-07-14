@@ -269,7 +269,6 @@ static bool management_process_command(struct management_command_parser *parser,
 }
 
 static bool stats_command_handler(struct management_command_parser *parser, struct buffer *response_buffer) {
-    printf("Calling stats command handler\n");
     if (parser->read_args != 0) {
         return management_command_parser_build_response(parser, response_buffer,
                                                  MANAGEMENT_INVALID_ARGUMENTS,
@@ -277,7 +276,6 @@ static bool stats_command_handler(struct management_command_parser *parser, stru
     }
 
     metrics_data_t metrics_data;
-    printf("About to get metrics data\n");
     get_metrics_data(&metrics_data);
 
     char response[256];

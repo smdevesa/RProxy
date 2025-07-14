@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #define INVALID_COMMAND 0xFF
 #define MAX_PAYLOAD_SIZE 256

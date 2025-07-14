@@ -84,7 +84,7 @@ bool send_management_command(int fd, uint8_t cmd, const char *args) {
 bool recv_management_response(int fd, char *output, size_t max_len) {
     uint8_t header[2];
     ssize_t r = recv(fd, header, 2, 0);
-    if (r != 2 || header[0] != 0x01 || header[1] != 0x00) {
+    if (r != 2 || header[0] != 0x01) {
         return false;
     }
 

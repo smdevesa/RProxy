@@ -7,13 +7,11 @@
 #include <stdio.h>
 
 void management_auth_init(unsigned int state, struct selector_key *key) {
-    printf("Initializing management authentication state\n");
     management_client *data = ATTACHMENT(key);
     auth_parser_init(&data->management_parser.auth_parser);
 }
 
 unsigned management_auth_read(struct selector_key *key) {
-    printf("Initializing management authentication read\n");
     management_client *data = ATTACHMENT(key);
     struct auth_parser *p = &data->management_parser.auth_parser;
 
@@ -34,7 +32,6 @@ unsigned management_auth_read(struct selector_key *key) {
             return MANAGEMENT_ERROR;
         }
 
-        printf("Authentication done, trying to authenticate user: %s\n", p->username);
         try_to_authenticate(p);
         data->is_admin = p->is_admin;
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || !auth_parser_build_response(p, &data->response_buffer)) {

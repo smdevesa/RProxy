@@ -31,7 +31,6 @@ static int setup_sock_addr(char *addr, unsigned short port, void *result, sockle
         sock_ipv6.sin6_family = AF_INET6;
         sock_ipv6.sin6_port = htons(port);
         if(inet_pton(AF_INET6, addr, &sock_ipv6.sin6_addr) <= 0) {
-            fprintf(stderr, "Dirección IPv6 inválida: %s\n", addr);
             return -1;
         }
         *(struct sockaddr_in6 *)result = sock_ipv6;

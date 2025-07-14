@@ -7,7 +7,7 @@
 #include "client_utils.h"
 
 #define HOST_DEFAULT "127.0.0.1"
-#define PORT_DEFAULT "1080"
+#define PORT_DEFAULT "8080"
 
 static void print_version() {
     printf("RProxy Client Version 1.0\n");
@@ -88,11 +88,15 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    if (!recv_management_response(socket_fd)) {
+    char buffer[1024];
+
+    if (!recv_management_response(socket_fd,buffer, sizeof(buffer))) {
         fprintf(stderr, "Error recibiendo respuesta\n");
         close(socket_fd);
         return EXIT_FAILURE;
     }
+
+    printf("%s\n", buffer);
 
     close(socket_fd);
     return EXIT_SUCCESS;

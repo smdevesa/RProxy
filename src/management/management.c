@@ -130,6 +130,7 @@ static void management_v1_close_connection(struct selector_key *key) {
         return; // Already closed
     }
     client->closed = true;
+    printf("Closing management connection: fd=%d\n", client->client_fd);
 
     if (client->client_fd >= 0) {
         selector_unregister_fd(key->s, client->client_fd);

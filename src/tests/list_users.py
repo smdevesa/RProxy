@@ -7,7 +7,7 @@ MGMT_PORT = 8080
 VERSION = 0x01
 
 # Comandos
-MANAGEMENT_COMMAND_USERS = 0x04
+MANAGEMENT_COMMAND_USERS = 0x00
 
 def socks5_login(sock, username, password):
     user_bytes = username.encode('utf-8')
