@@ -10,7 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <arpa/inet.h>
+
 #include "dns_resolver.h"
+#include "../users.h"
+
 
 static unsigned analyze_request(struct selector_key *key);
 static unsigned start_connection(struct selector_key *key);
@@ -229,8 +233,33 @@ static unsigned start_connection(struct selector_key *key) {
             return REQUEST_WRITE;
         }
     }
-
     // Connection successful
+    // if (data->username[0] != '\0') {
+    //     char ip_str[INET6_ADDRSTRLEN]; // Buffer suficientemente grande para IPv4 o IPv6
+    //
+    //     // Convertir la dirección IP a string dependiendo de la familia
+    //     if (data->origin_addrinfo->ai_family == AF_INET) {
+    //         // IPv4
+    //         struct sockaddr_in *addr = (struct sockaddr_in*)data->origin_addrinfo->ai_addr;
+    //         inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
+    //
+    //         // Añadir el puerto para más detalle
+    //         char full_addr[INET6_ADDRSTRLEN + 8]; // Extra para el puerto
+    //         snprintf(full_addr, sizeof(full_addr), "%s:%d", ip_str, ntohs(addr->sin_port));
+    //
+    //         register_user_access(data->username, full_addr);
+    //     } else if (data->origin_addrinfo->ai_family == AF_INET6) {
+    //         // IPv6
+    //         struct sockaddr_in6 *addr = (struct sockaddr_in6*)data->origin_addrinfo->ai_addr;
+    //         inet_ntop(AF_INET6, &(addr->sin6_addr), ip_str, INET6_ADDRSTRLEN);
+    //
+    //         // Añadir el puerto para IPv6
+    //         char full_addr[INET6_ADDRSTRLEN + 8];
+    //         snprintf(full_addr, sizeof(full_addr), "[%s]:%d", ip_str, ntohs(addr->sin6_port));
+    //         register_user_access(data->username, full_addr);
+    //     }
+    // }
+
     request_build_response(&data->client.request_parser, &data->origin_buffer, REQUEST_REPLY_SUCCESS);
     if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
         return ERROR;

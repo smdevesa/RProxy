@@ -1,5 +1,6 @@
 #include "users.h"
 #include <string.h>
+#include <time.h>
 
 static struct user_t users[MAX_USERS];
 static int user_count;
@@ -190,4 +191,43 @@ bool change_user_role(const char *username, bool is_admin) {
     }
     users[user_idx].is_admin = is_admin;
     return true;
+}
+
+bool register_user_access(const char *username, const char *ip_or_site) {
+    int user_idx = find_user(username);
+    if (user_idx == -1) {
+        return false;  // Usuario no encontrado
+    }
+
+    struct user_t *user = &users[user_idx];
+    if (user->access_log_count >= MAX_ACCESS_LOGS) {
+        // Si el log está lleno, sobrescribir el más antiguo
+        user->current_access_log_index = (user->current_access_log_index + 1) % MAX_ACCESS_LOGS;
+    } else {
+        user->access_log_count++;
+    }
+
+    struct access_log_t *log = &user->access_logs[user->current_access_log_index];
+    strncpy(log->ip_or_site, ip_or_site, MAX_IP_OR_SITE_LENGTH);
+    log->ip_or_site[MAX_IP_OR_SITE_LENGTH] = '\0'; // Asegurar terminación nula
+    log->timestamp = time(NULL); // Registrar tiempo actual
+
+    return true;
+}
+
+size_t get_user_access_history(const char *username, struct access_log_t *logs, size_t max_logs){
+
+    int user_idx = find_user(username);
+    if (user_idx == -1) {
+        return 0;  // Usuario no encontrado
+    }
+
+    struct user_t *user = &users[user_idx];
+    size_t count = user->access_log_count < max_logs ? user->access_log_count : max_logs;
+
+    for (size_t i = 0; i < count; i++) {
+        logs[i] = user->access_logs[(user->current_access_log_index + i) % MAX_ACCESS_LOGS];
+    }
+
+    return count;
 }

@@ -36,6 +36,7 @@ struct  client_data {
     struct gaicb dns_req;
     char dns_host[256];
     char dns_port[6];
+    char username[65]; // +1 for null terminated
     bool resolution_from_getaddrinfo;
     bool is_admin; //TODO Usage?
 };

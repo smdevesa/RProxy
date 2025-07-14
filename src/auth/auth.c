@@ -1,6 +1,7 @@
 #include "auth.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "../socks5/socks5.h"
 
@@ -30,6 +31,12 @@ unsigned auth_read(struct selector_key *key) {
         }
 
         try_to_authenticate(p);
+
+        if (p->authenticated){
+            strncpy(data->username, p->username, sizeof(data->username) - 1);
+            data->username[sizeof(data->username) - 1] = '\0';
+        }
+
         data->is_admin = p->is_admin;
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || !auth_parser_build_response(p, &data->origin_buffer)) {
             return ERROR;

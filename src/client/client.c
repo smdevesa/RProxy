@@ -26,6 +26,7 @@ static void print_help(char * name) {
     printf("  CHANGE_PASSWORD <username> <new_password>  Change the password for the given user\n");
     printf("  STATS               Show server statistics\n");
     printf("  CHANGE_ROLE <username> <role>  Change the role of the user (admin/user)\n");
+    printf("  VIEW_ACTIVITY_LOG <username>  View the activity log of the user\n");
 }
 
 int main(int argc, char *argv[]) {

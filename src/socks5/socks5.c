@@ -109,6 +109,8 @@ void socks_v5_passive_accept(struct selector_key *key) {
     data->client_fd = new_client_fd;
     data->origin_fd = -1; // Initially, no origin connection
     data->client_addr = client_addr;
+    data->username[0] = '\0';
+    data->is_admin = false; // Default to non-admin
 
     buffer_init(&data->client_buffer, BUFFER_SIZE, data->client_buffer_data);
     buffer_init(&data->origin_buffer, BUFFER_SIZE, data->origin_buffer_data);
