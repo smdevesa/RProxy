@@ -347,11 +347,20 @@ static bool view_activity_log_command_handler(struct management_command_parser *
     // Formatear cada registro
     for (size_t i = 0; i < total_logs && response_len < (int)sizeof(response) - 1; i++) {
         char time_str[64];
-        struct tm *tm_info = localtime((time_t*)&logs[i].timestamp);
-        strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
 
-        response_len += snprintf(response + response_len, sizeof(response) - response_len,
-                      "%s - %s\n", time_str, logs[i].ip_or_site);
+        // Corregir la conversión del timestamp
+        time_t timestamp = (time_t)logs[i].timestamp;  // Conversión directa sin usar puntero
+        struct tm *tm_info = localtime(&timestamp);
+
+        if (tm_info != NULL) {
+            strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
+            response_len += snprintf(response + response_len, sizeof(response) - response_len,
+                          "%s - %s\n", time_str, logs[i].ip_or_site);
+        } else {
+            // Manejo de timestamp inválido
+            response_len += snprintf(response + response_len, sizeof(response) - response_len,
+                          "[Fecha inválida] - %s\n", logs[i].ip_or_site);
+        }
     }
 
     size_t available;
