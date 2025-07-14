@@ -28,8 +28,8 @@
 
 #define ATTACHMENT(key) ((struct management_client *)((key)->data))
 
-#define REQUEST_BUFFER_SIZE 256
-#define RESPONSE_BUFFER_SIZE 256
+#define REQUEST_BUFFER_SIZE 512
+#define RESPONSE_BUFFER_SIZE 8196
 
 typedef enum {
     MANAGEMENT_AUTH = 0,
@@ -54,6 +54,8 @@ typedef struct management_client {
 
     struct buffer request_buffer; // Buffer for incoming requests
     struct buffer response_buffer; // Buffer for outgoing responses
+    uint8_t request_buffer_data[REQUEST_BUFFER_SIZE]; // Data for request buffer
+    uint8_t response_buffer_data[RESPONSE_BUFFER_SIZE]; // Data for response buffer
 
     management_command command; // Current management command being processed
     bool is_admin; // Indicates if the user is an admin
