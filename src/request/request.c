@@ -240,8 +240,10 @@ static unsigned start_connection(struct selector_key *key) {
                     char full_addr[INET6_ADDRSTRLEN + 8]; // Extra para el puerto
                     snprintf(full_addr, sizeof(full_addr), "%s:%d", ip_str, ntohs(addr->sin_port));
 
-                    register_user_access(data->username, full_addr);
-                } else if (data->origin_addrinfo->ai_family == AF_INET6) {
+                    if (!data->access_registered) {
+                        register_user_access(data->username, full_addr);
+                        data->access_registered = true;
+                    }                } else if (data->origin_addrinfo->ai_family == AF_INET6) {
                     // IPv6
                     struct sockaddr_in6 *addr = (struct sockaddr_in6*)data->origin_addrinfo->ai_addr;
                     inet_ntop(AF_INET6, &(addr->sin6_addr), ip_str, INET6_ADDRSTRLEN);
@@ -249,8 +251,10 @@ static unsigned start_connection(struct selector_key *key) {
                     // Añadir el puerto para IPv6
                     char full_addr[INET6_ADDRSTRLEN + 8];
                     snprintf(full_addr, sizeof(full_addr), "[%s]:%d", ip_str, ntohs(addr->sin6_port));
-                    register_user_access(data->username, full_addr);
-                }
+                    if (!data->access_registered) {
+                        register_user_access(data->username, full_addr);
+                        data->access_registered = true;
+                    }                }
             }
             return REQUEST_CONNECT; // Connection in progress
         } else {
@@ -282,5 +286,9 @@ unsigned request_dns(struct selector_key *key) {
     data->dns_req.ar_result = NULL;
     data->resolution_from_getaddrinfo = true;
 
+    if (!data->access_registered && data->username[0] != '\0') {
+        register_user_access(data->username, data->dns_host);
+        data->access_registered = true;
+    }
     return start_connection(key);
 }

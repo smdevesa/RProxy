@@ -39,6 +39,7 @@ struct  client_data {
     char username[65]; // +1 for null terminated
     bool resolution_from_getaddrinfo;
     bool is_admin; //TODO Usage?
+    bool access_registered; // Indicates if the user access has been registered
 };
 
 enum socks5_state {
