@@ -101,12 +101,3 @@ static enum handshake_parser_state parse_done(handshake_parser_t *parser, uint8_
 static enum handshake_parser_state parse_error(handshake_parser_t *parser, uint8_t c) {
     return HANDSHAKE_PARSER_ERROR;
 }
-
-
-
-
-
-
-
-
-

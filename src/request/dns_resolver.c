@@ -17,8 +17,6 @@ void dns_resolver_init(struct selector_key *key) {
     if (parser->dst_addr_length >= sizeof(data->dns_host)) {
         parser->dst_addr_length = sizeof(data->dns_host) - 1;
     }
-    printf(">>> About to copy domain: len=%zu, addr=%p\n",
-       parser->dst_addr_length, (void *)parser->dst_addr);
     memcpy(data->dns_host, parser->dst_addr, parser->dst_addr_length);
     data->dns_host[parser->dst_addr_length] = '\0';
 
@@ -45,7 +43,6 @@ void dns_resolver_init(struct selector_key *key) {
     struct gaicb *reqs[1] = { &data->dns_req };
     data->dns_req.ar_result = NULL;
     if (getaddrinfo_a(GAI_NOWAIT, reqs, 1, &sev) != 0) {
-        printf(">> dns_resolver_init lanzó getaddrinfo_a OK\n");
         request_build_response(parser, &data->origin_buffer,
                                REQUEST_REPLY_HOST_UNREACHABLE);
         selector_set_interest_key(key, OP_WRITE);
@@ -58,10 +55,8 @@ void dns_resolver_init(struct selector_key *key) {
 void dns_resolution_done(union sigval sv) {
     struct client_data *data = sv.sival_ptr;
     if (data == NULL || data->selector == NULL) {
-        fprintf(stderr, ">>> ERROR: datos nulos\n");
         return;
     }
-    printf(">>> DNS resolution completed for host=%s\n", data->dns_host);
     selector_notify_block(data->selector, data->client_fd);
 }
 

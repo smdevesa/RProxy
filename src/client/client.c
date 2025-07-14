@@ -71,19 +71,19 @@ int main(int argc, char *argv[]) {
     printf("Connection established with server\n");
 
     if (!send_auth_credentials(socket_fd, username, password)) {
-        fprintf(stderr, "Error sending credentials\n");
+        fprintf(stderr, "Error sending authentication credentials\n");
         close(socket_fd);
         return EXIT_FAILURE;
     }
 
     if (!recv_auth_response(socket_fd)) {
-        fprintf(stderr, "Autenticación fallida\n");
+        fprintf(stderr, "Auth failed\n");
         close(socket_fd);
         return EXIT_FAILURE;
     }
 
     if (!send_management_command(socket_fd, command_code, payload)) {
-        fprintf(stderr, "Error enviando comando\n");
+        fprintf(stderr, "Error sending management command\n");
         close(socket_fd);
         return EXIT_FAILURE;
     }
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
     char buffer[1024];
 
     if (!recv_management_response(socket_fd,buffer, sizeof(buffer))) {
-        fprintf(stderr, "Error recibiendo respuesta\n");
+        fprintf(stderr, "Error receiving server response\n");
         close(socket_fd);
         return EXIT_FAILURE;
     }

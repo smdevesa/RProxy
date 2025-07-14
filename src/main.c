@@ -44,7 +44,6 @@ static int setup_sock_addr(char *addr, unsigned short port, void *result, sockle
     sock_ipv4.sin_family = AF_INET;
     sock_ipv4.sin_port = htons(port);
     if(inet_pton(AF_INET, addr, &sock_ipv4.sin_addr) <= 0) {
-        fprintf(stderr, "Dirección IPv4 inválida: %s\n", addr);
         return -1;
     }
     *(struct sockaddr_in *)result = sock_ipv4;
@@ -58,11 +57,11 @@ int main(int argc, char *argv[]) {
     close(STDIN_FILENO);                    // Cerrar stdin para evitar bloqueos
     signal(SIGPIPE, SIG_IGN);               // Ignorar señales SIGPIPE para evitar cierres inesperados
 
-    printf("BIENVENIDOS AL SERVIDOR RPROXY\n");
-    printf("Usuario por defecto creado: %s\n", DEFAULT_ADMIN_USERNAME);
+    printf("RProxy SOCKS5 Server 1.0\n");
+    printf("Default admin user credentials: admin:1234\n");
 
     if(!config_init()) {
-        fprintf(stderr, "Error al inicializar la configuración\n");
+        fprintf(stderr, "Error initializing configuration module. Aborting.\n");
         exit(1);
     }
 
@@ -76,12 +75,12 @@ int main(int argc, char *argv[]) {
             },
     };
     if(selector_init(&config) != 0) {
-        fprintf(stderr, "Error al inicializar el selector\n");
+        fprintf(stderr, "Error initializing selector. Aborting.\n");
         exit(1);
     }
     struct fdselector *selector = selector_new(FD_SETSIZE);
     if(selector == NULL) {
-        fprintf(stderr, "Error al crear el selector\n");
+        fprintf(stderr, "Error creating selector. Aborting.\n");
         selector_close();
         exit(1);
     }
@@ -96,7 +95,7 @@ int main(int argc, char *argv[]) {
     int server = -1;
 
     if(setup_sock_addr(args.socks_addr, args.socks_port, &aux, &aux_len) < 0) {
-        fprintf(stderr, "Error al configurar la dirección del servidor SOCKS\n");
+        fprintf(stderr, "Error setting up socket address for %s:%d Aborting.", args.socks_addr, args.socks_port);
         selector_close();
         exit(1);
     }
@@ -128,11 +127,11 @@ int main(int argc, char *argv[]) {
     ss = selector_register(selector, server, &socks_v5, OP_READ, NULL);
 
     if(ss != SELECTOR_SUCCESS) {
-        fprintf(stderr, "Error al registrar el socket del servidor SOCKS: %s\n", selector_error(ss));
+        fprintf(stderr, "Error registering SOCKS5 server socket: %s\n", selector_error(ss));
         goto finally;
     }
 
-    printf("Servidor SOCKS5 escuchando en %s:%d\n", args.socks_addr, args.socks_port);
+    printf("Socks5 server listening on %s:%d\n", args.socks_addr, args.socks_port);
 
     int mng_server = -1;
     struct sockaddr_storage mng_sock_addr;
@@ -140,7 +139,7 @@ int main(int argc, char *argv[]) {
     memset(&mng_sock_addr, 0, sizeof(mng_sock_addr));
 
     if (setup_sock_addr(args.mng_addr, args.mng_port, &mng_sock_addr, &mng_sock_len) < 0) {
-        fprintf(stderr, "Error al configurar el socket de management\n");
+        fprintf(stderr, "Error setting up management socket address for %s:%d Aborting.\n", args.mng_addr, args.mng_port);
         goto finally;
     }
 
@@ -172,15 +171,15 @@ int main(int argc, char *argv[]) {
 
     ss = selector_register(selector, mng_server, &mng_handler, OP_READ, NULL);
     if (ss != SELECTOR_SUCCESS) {
-        fprintf(stderr, "Error al registrar el socket de management: %s\n", selector_error(ss));
+        fprintf(stderr, "Error registering management server socket: %s\n", selector_error(ss));
         goto finally;
     }
 
-    printf("Servidor de management escuchando en %s:%d\n", args.mng_addr, args.mng_port);
+    printf("Management server listening on %s:%d\n", args.mng_addr, args.mng_port);
     while(true) {
         ss = selector_select(selector);
         if(ss != SELECTOR_SUCCESS) {
-            fprintf(stderr, "Error en selector_select: %s\n", selector_error(ss));
+            fprintf(stderr, "Error in selector_select: %s\n", selector_error(ss));
             goto finally;
         }
     }
@@ -197,6 +196,6 @@ int main(int argc, char *argv[]) {
     }
     config_cleanup();
     selector_close();
-    printf("Servidor SOCKS5 cerrado.\n");
+    printf("Server shutting down.\n");
     return 0;
 }

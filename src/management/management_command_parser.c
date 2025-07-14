@@ -101,7 +101,6 @@ static management_command_state parse_payload_len(management_command_parser *par
         return MANAGEMENT_PARSER_ERROR;
     }
 
-    printf("Payload length to read: %d\n", c);
     parser->to_read_len = c;
 
     // Manejo especial para comandos sin argumentos cuando longitud es 0
