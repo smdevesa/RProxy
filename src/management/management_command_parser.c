@@ -1,4 +1,5 @@
 #include "management_command_parser.h"
+#include <string.h>
 
 #define DELIMITER ':'
 
@@ -53,21 +54,28 @@ bool management_command_parser_has_error(const management_command_parser *parser
     return parser != NULL && parser->state == MANAGEMENT_PARSER_ERROR;
 }
 
-bool management_command_parser_build_response(const management_command_parser *parser, struct buffer *buf, management_status reply_code) {
+bool management_command_parser_build_response(const management_command_parser *parser,
+                                              struct buffer *buf,
+                                              management_status reply_code,
+                                              const char *msg) {
     if (parser == NULL || buf == NULL) return false;
 
-    // Build the response based on the parser state
-    uint8_t response[] = {0x01, reply_code}; // Version 1, followed by the status code
-    size_t response_length = sizeof(response) / sizeof(response[0]);
+    uint8_t header[] = {0x01, reply_code};
+    for (size_t i = 0; i < sizeof(header); ++i) {
+        if (!buffer_can_write(buf)) return false;
+        buffer_write(buf, header[i]);
+    }
 
-    for (size_t i = 0; i < response_length; ++i) {
-        if (!buffer_can_write(buf)) {
-            return false;
+    if (msg != NULL) {
+        size_t len = strlen(msg) + 1;
+        for (size_t i = 0; i < len; ++i) {
+            if (!buffer_can_write(buf)) return false;
+            buffer_write(buf, (uint8_t)msg[i]);
         }
-        buffer_write(buf, response[i]);
     }
     return true;
 }
+
 
 static management_command_state parse_version(management_command_parser *parser, uint8_t c){
     if (c != MANAGEMENT_VERSION) {

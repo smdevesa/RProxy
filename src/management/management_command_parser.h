@@ -35,7 +35,10 @@ typedef enum {
     MANAGEMENT_INVALID_VERSION,
     MANAGEMENT_INVALID_COMMAND,
     MANAGEMENT_INVALID_ARGUMENTS,
+    MANAGEMENT_USER_ALREADY_EXISTS,
+    MANAGEMENT_USER_NOT_FOUND,
     MANAGEMENT_INVALID_LENGTH,
+    MANAGEMENT_SERVER_ERROR,
 } management_status;
 
 typedef struct management_command_parser {
@@ -72,9 +75,10 @@ management_command_state management_command_parser_parse(management_command_pars
  * @param parser Pointer to the management command parser structure.
  * @param buf Pointer to the buffer where the response will be written.
  * @param reply_code The status code to include in the response.
+ * @param msg The message to include in the response.
  * @return true if the response was successfully built, false otherwise.
  */
-bool management_command_parser_build_response(const management_command_parser *parser, struct buffer *buf, management_status reply_code);
+bool management_command_parser_build_response(const management_command_parser *parser, struct buffer *buf, management_status reply_code, const char *msg);
 
 /**
  * @brief Checks if the parser has completed processing the command.

@@ -46,5 +46,11 @@ bool delete_user(const char *username);
  */
 bool users_is_admin(const char *username);
 
+/**
+ * Checks if a user with the given username exists.
+ * Returns true if the user exists, false otherwise.
+ */
+bool exists_user(const char *username);
+
 
 #endif //USERS_H

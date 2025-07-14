@@ -1,6 +1,5 @@
 #include "users.h"
 #include <string.h>
-#include <regex.h>
 
 static struct user_t users[MAX_USERS];
 static int user_count;
@@ -141,4 +140,8 @@ bool users_is_admin(const char *username) {
         return false;  // Usuario no encontrado
     }
     return users[user_idx].is_admin;
+}
+
+bool exists_user(const char *username) {
+    return find_user(username) != -1;
 }

@@ -1,18 +1,19 @@
 #include "management_command.h"
 #include "management.h"
 #include "management_command_parser.h"
+#include "../users.h"
 #include <sys/socket.h>
 
-static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer, int fd);
+static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer);
 
-typedef int (*management_command_handler)(struct management_command_parser *parser, struct buffer *response_buffer, int client_fd);
+typedef void (*management_command_handler)(struct management_command_parser *parser, struct buffer *response_buffer);
 
-static int users_command_handler(struct management_command_parser *parser, struct buffer *response_buffer, int client_fd);
-static int add_user_command_handler(struct management_command_parser *parser, struct buffer *response_buffer, int client_fd);
-static int delete_users_command_handler(struct management_command_parser *parser, struct buffer *response_buffer, int client_fd);
-static int change_password_command_handler(struct management_command_parser *parser, struct buffer *response_buffer, int client_fd);
-static int stats_command_handler(struct management_command_parser *parser, struct buffer *response_buffer, int client_fd);
-static int change_role_command_handler(struct management_command_parser *parser, struct buffer *response_buffer, int client_fd);
+static void users_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
+static void add_user_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
+static void delete_users_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
+static void change_password_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
+static void stats_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
+static void change_role_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
 
 static management_command_handler command_handlers[] = {
     users_command_handler,
@@ -45,7 +46,7 @@ int management_command_read(struct selector_key *key) {
     management_command_parser_parse(&data->management_parser.request_parser, &data->request_buffer);
     if(management_command_parser_is_done(&data->management_parser.request_parser)) {
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS ||
-        !management_process_command(&data->management_parser.request_parser, &data->response_buffer, data->client_fd)) {
+        !management_process_command(&data->management_parser.request_parser, &data->response_buffer)) {
             return MANAGEMENT_ERROR;
         }
         data->command = data->management_parser.request_parser.command;
@@ -76,10 +77,42 @@ int management_command_write(struct selector_key *key) {
     return MANAGEMENT_CLOSED;
 }
 
-static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer, int fd) {
+static void add_user_command_handler(struct management_command_parser *parser,
+                                     struct buffer *response_buffer) {
+
+    if (parser->read_args != 2) {
+        management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "add_user: missing arguments");
+        return;
+    }
+
+    const char *username = (const char *)parser->args[0];
+    const char *password = (const char *)parser->args[1];
+
+    if (exists_user(username)) {
+        management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_USER_ALREADY_EXISTS,
+                                                 "add_user: user already exists");
+        return;
+    }
+
+    if (create_user(username, password, false)) {
+        management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_SUCCESS,
+                                                 "add_user: user added successfully");
+        return;
+    }
+
+    management_command_parser_build_response(parser, response_buffer,
+                                             MANAGEMENT_SERVER_ERROR,
+                                             "add_user: failed to add user");
+}
+
+static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer) {
     if(parser->command <= MANAGEMENT_COMMAND_MAX) {
-        int response = command_handlers[parser->command](parser, buffer, fd);
-        return management_command_parser_build_response(parser, buffer, response);
+        command_handlers[parser->command](parser, buffer);
+        return true;
     }
     return false;
 }
