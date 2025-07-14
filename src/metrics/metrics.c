@@ -24,8 +24,8 @@ void metrics_register_bytes_transferred(size_t bytes_sent, size_t bytes_received
     data.bytes_received += bytes_received;
 }
 
-void get_metrics_data(metrics_data_t *metrics_data) {
-    if (metrics_data != NULL) {
-        memcpy(metrics_data, &data, sizeof(metrics_data_t));
+void get_metrics_data(metrics_data_t *m_data) {
+    if (m_data != NULL) {
+        memcpy(m_data, &data, sizeof(metrics_data_t));
     }
 }

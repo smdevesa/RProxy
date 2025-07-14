@@ -41,7 +41,7 @@ void metrics_register_bytes_transferred(size_t bytes_sent, size_t bytes_received
  *
  * @return Pointer to the metrics data structure.
  */
-void get_metrics_data(metrics_data *data);
+void get_metrics_data(metrics_data_t *m_data);
 
 
 #endif //METRICS_H

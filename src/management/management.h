@@ -47,7 +47,7 @@ typedef struct management_client {
     struct state_machine sm;
 
     union {
-        struct  auth_parser auth_parser; // For authentication
+        auth_parser_t auth_parser; // For authentication
         management_command_parser request_parser; // For management commands
     } management_parser;
 

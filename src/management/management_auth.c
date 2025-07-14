@@ -42,7 +42,7 @@ unsigned management_auth_read(struct selector_key *key) {
     return MANAGEMENT_AUTH_READ;
 }
 
-unsigned auth_write(struct selector_key *key) {
+unsigned management_auth_write(struct selector_key *key) {
     management_client *data = ATTACHMENT(key);
 
     size_t write_limit;    // Maximum bytes to write in this operation

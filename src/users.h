@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 // Maximum lengths for username and password
 #define MAX_USERNAME_LENGTH 64
