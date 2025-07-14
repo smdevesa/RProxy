@@ -140,9 +140,12 @@ static unsigned write_from_client(struct selector_key *key, struct client_data *
 
     buffer_read_adv(&data->origin_buffer, write_count);
 
-    if (!buffer_can_read(&data->origin_buffer)){
-        // Si no hay más datos para escribir, volver a modo lectura
-        if (selector_set_interest(key->s, data->origin_fd, OP_READ) != SELECTOR_SUCCESS){
+    if (!buffer_can_read(&data->client_buffer)) {
+        if (selector_set_interest(key->s, data->client_fd, OP_READ) != SELECTOR_SUCCESS) {
+            return ERROR;
+        }
+    } else {
+        if (selector_set_interest(key->s, data->client_fd, OP_WRITE) != SELECTOR_SUCCESS) {
             return ERROR;
         }
     }
@@ -168,9 +171,12 @@ static unsigned write_from_origin(struct selector_key *key, struct client_data *
 
     buffer_read_adv(&data->client_buffer, write_count);
 
-    if (!buffer_can_read(&data->client_buffer)){
-        // Si no hay más datos para escribir, volver a modo lectura
-        if (selector_set_interest(key->s, data->client_fd, OP_READ) != SELECTOR_SUCCESS){
+    if (!buffer_can_read(&data->client_buffer)) {
+        if (selector_set_interest(key->s, data->client_fd, OP_READ) != SELECTOR_SUCCESS) {
+            return ERROR;
+        }
+    } else {
+        if (selector_set_interest(key->s, data->client_fd, OP_WRITE) != SELECTOR_SUCCESS) {
             return ERROR;
         }
     }
