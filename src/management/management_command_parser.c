@@ -53,7 +53,7 @@ bool management_command_parser_has_error(const management_command_parser *parser
     return parser != NULL && parser->state == MANAGEMENT_PARSER_ERROR;
 }
 
-bool management_parser_build_response(const management_command_parser *parser, struct buffer *buf, management_status reply_code) {
+bool management_command_parser_build_response(const management_command_parser *parser, struct buffer *buf, management_status reply_code) {
     if (parser == NULL || buf == NULL) return false;
 
     // Build the response based on the parser state

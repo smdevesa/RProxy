@@ -74,7 +74,7 @@ management_command_state management_command_parser_parse(management_command_pars
  * @param reply_code The status code to include in the response.
  * @return true if the response was successfully built, false otherwise.
  */
-bool management_parser_build_response(const management_command_parser *parser, struct buffer *buf, management_status reply_code);
+bool management_command_parser_build_response(const management_command_parser *parser, struct buffer *buf, management_status reply_code);
 
 /**
  * @brief Checks if the parser has completed processing the command.
