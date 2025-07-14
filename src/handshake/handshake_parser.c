@@ -81,14 +81,17 @@ static enum handshake_parser_state parse_methods(handshake_parser_t *parser, uin
     if (c == default_method) {
         parser->selected_method = default_method;
     }
-    else if (c == NO_AUTH && parser->selected_method == NO_ACCEPTABLE) {
-        parser->selected_method = NO_AUTH;
+    else if (parser->selected_method == NO_ACCEPTABLE) {
+        parser->selected_method = c;
     }
     parser->methods_count--;
-    if (parser->methods_count == 0 && parser->selected_method == NO_ACCEPTABLE) {
-        return HANDSHAKE_PARSER_ERROR; // No acceptable methods found
+    if (parser->methods_count == 0) {
+        if (parser->selected_method == NO_ACCEPTABLE) {
+            return HANDSHAKE_PARSER_ERROR;
+        }
+        return HANDSHAKE_PARSER_DONE;
     }
-    return parser->methods_count > 0 ? HANDSHAKE_PARSER_METHODS : HANDSHAKE_PARSER_DONE;
+    return HANDSHAKE_PARSER_METHODS;
 }
 
 static enum handshake_parser_state parse_done(handshake_parser_t *parser, uint8_t c) {
