@@ -14,18 +14,21 @@ static void print_version() {
     printf("Developed by GROUP 12\n");
 }
 
+static void print_command_info() {
+    printf("Available commands:\n");
+    for (size_t i = 0; i < COMMANDS_COUNT; ++i) {
+        printf("  %-22s %d args %s\n",
+               commands[i].name,
+               commands[i].argc_expected,
+               commands[i].needs_admin ? "(admin only)" : "");
+    }
+}
+
 static void print_help(char * name) {
     printf("Usage: %s <host> <port> <username> <password> OPTION\n", name);
     printf("You can use * to use default values of host and port.\n");
     printf("Available options:\n");
-    printf("  -h, --help          Show this help message and exit\n");
-    printf("  -v, --version       Show version information and exit\n");
-    printf("  USERS               List all users\n");
-    printf("  ADD_USER <username> <password>  Add a new user with the given username and password\n");
-    printf("  DELETE_USER <username>  Delete the user with the given username\n");
-    printf("  CHANGE_PASSWORD <username> <new_password>  Change the password for the given user\n");
-    printf("  STATS               Show server statistics\n");
-    printf("  CHANGE_ROLE <username> <role>  Change the role of the user (admin/user)\n");
+    print_command_info();
 }
 
 int main(int argc, char *argv[]) {
@@ -41,27 +44,40 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    char payload[MAX_PAYLOAD_SIZE];
-    size_t payload_len = build_payload_string(payload, argc, argv, 6);
-
-    if(argc < 6) {
+    if (argc < 6) {
         print_help(argv[0]);
         return EXIT_FAILURE;
     }
+
+    const command_info_t *info = get_command_info(argv[5]);
+    if (info == NULL) {
+        fprintf(stderr, "Invalid command: %s\n", argv[5]);
+        return EXIT_FAILURE;
+    }
+
+    int args_provided = argc - 6;
+    if (args_provided < info->argc_expected) {
+        fprintf(stderr, "Command '%s' expects %d arguments, got %d\n",
+                info->name, info->argc_expected, args_provided);
+        return EXIT_FAILURE;
+    }
+
+    char payload[MAX_PAYLOAD_SIZE];
+    size_t payload_len = build_payload_string(payload, argc, argv, 6);
+    if (payload_len == 0 && info->argc_expected > 0) {
+        fprintf(stderr, "Failed to build command payload\n");
+        return EXIT_FAILURE;
+    }
+
+    uint8_t command_code = info->code;
+
 
     const char *host     = (strcmp(argv[1], "*") == 0) ? HOST_DEFAULT : argv[1];
     const char *port     = (strcmp(argv[2], "*") == 0) ? PORT_DEFAULT : argv[2];
     const char *username = argv[3];
     const char *password = argv[4];
-    const char *option   = argv[5];
 
-    uint8_t command_code = get_command_code(argv[5]);
-    if (command_code == INVALID_COMMAND) {
-        fprintf(stderr, "Invalid command: %s\n", argv[5]);
-        return EXIT_FAILURE;
-    }
-
-    printf("Conecting %s:%s as %s...\n", host, port, username);
+    printf("Connecting to %s:%s as %s...\n", host, port, username);
 
     int socket_fd = connect_to_server_TCP(host, port);
     if (socket_fd < 0) {

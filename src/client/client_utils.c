@@ -138,17 +138,6 @@ bool recv_management_response(int fd, char *output, size_t max_len) {
     return true;
 }
 
-uint8_t get_command_code(const char *option) {
-    if (strcmp(option, "USERS") == 0) return 0x00;
-    if (strcmp(option, "ADD_USER") == 0) return 0x01;
-    if (strcmp(option, "DELETE_USER") == 0) return 0x02;
-    if (strcmp(option, "CHANGE_PASSWORD") == 0) return 0x03;
-    if (strcmp(option, "STATS") == 0) return 0x04;
-    if (strcmp(option, "CHANGE_ROLE") == 0) return 0x05;
-
-    return INVALID_COMMAND;
-}
-
 size_t build_payload_string(char *dest, int argc, char *argv[], int start_index) {
     size_t total = 0;
     size_t max_len = MAX_PAYLOAD_SIZE;
@@ -170,4 +159,13 @@ size_t build_payload_string(char *dest, int argc, char *argv[], int start_index)
 
     dest[total] = '\0';
     return total;
+}
+
+const command_info_t *get_command_info(const char *name) {
+    for (size_t i = 0; i < COMMANDS_COUNT; ++i) {
+        if (strcmp(commands[i].name, name) == 0) {
+            return &commands[i];
+        }
+    }
+    return NULL;
 }
