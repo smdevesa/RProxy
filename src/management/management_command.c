@@ -6,7 +6,7 @@
 #include <string.h>
 #include <sys/socket.h>
 
-static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer);
+static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer, bool is_admin);
 
 typedef bool (*management_command_handler)(struct management_command_parser *parser, struct buffer *response_buffer);
 
@@ -24,6 +24,15 @@ static management_command_handler command_handlers[] = {
     change_password_command_handler,
     stats_command_handler,
     change_role_command_handler
+};
+
+static bool needs_admin_privileges[] = {
+    false, // MANAGEMENT_COMMAND_USERS
+    true,  // MANAGEMENT_COMMAND_ADD_USER
+    true,  // MANAGEMENT_COMMAND_DELETE_USERS
+    true,  // MANAGEMENT_COMMAND_CHANGE_PASSWORD
+    false, // MANAGEMENT_COMMAND_STATS
+    true   // MANAGEMENT_COMMAND_CHANGE_ROLE
 };
 
 void management_command_read_init(struct selector_key *key) {
@@ -53,7 +62,8 @@ int management_command_read(struct selector_key *key) {
         }
 
         if (!management_process_command(&data->management_parser.request_parser,
-                                        &data->response_buffer)) {
+                                        &data->response_buffer),
+                                                data->is_admin) {
             return MANAGEMENT_ERROR;
         }
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS)
@@ -236,11 +246,18 @@ static bool change_role_command_handler(struct management_command_parser *parser
 }
 
 static bool management_process_command(struct management_command_parser *parser,
-                                       struct buffer *resp)
-{
-    size_t n = sizeof command_handlers / sizeof command_handlers[0];
-    if ((size_t)parser->command >= n)          /* enum fuera de rango */
-        return false;
+                                       struct buffer *resp, bool is_admin) {
+    {
+        size_t n = sizeof command_handlers / sizeof command_handlers[0];
+        if ((size_t) parser->command >= n)          /* enum fuera de rango */
+            return false;
 
-    return command_handlers[parser->command](parser, resp);
+        if (needs_admin_privileges[parser->command] && !is_admin) {
+            return management_command_parser_build_response(parser, resp,
+                                                            MANAGEMENT_FORBIDDEN,
+                                                            "command requires admin privileges");
+        }
+
+        return command_handlers[parser->command](parser, resp);
+    }
 }
