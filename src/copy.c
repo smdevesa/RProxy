@@ -1,5 +1,6 @@
 #include "copy.h"
 #include "errno.h"
+#include "metrics/metrics.h"
 
 static unsigned read_from_client(struct selector_key *key, struct client_data *data);
 static unsigned read_from_origin(struct selector_key *key, struct client_data *data);
@@ -108,6 +109,7 @@ static unsigned read_from_origin(struct selector_key *key, struct client_data *d
 
     if (write_count > 0) {
         buffer_read_adv(&data->client_buffer, write_count);
+        metrics_register_bytes_transferred(0, write_count);
     }
 
     if (buffer_can_read(&data->client_buffer) || (write_count < 0 && errno == EWOULDBLOCK)) {
@@ -133,6 +135,8 @@ static unsigned write_from_client(struct selector_key *key, struct client_data *
         perror("send");
         return ERROR;
     }
+
+    metrics_register_bytes_transferred(write_count, 0);
 
     buffer_read_adv(&data->origin_buffer, write_count);
 

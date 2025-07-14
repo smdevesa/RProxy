@@ -2,6 +2,7 @@
 #include <string.h>
 
 #define DELIMITER ':'
+#include <stdio.h>
 
 typedef management_command_state (*state_handler)(management_command_parser *, uint8_t);
 
@@ -31,6 +32,7 @@ static state_handler state_handlers[] = {
 };
 
 void management_command_parser_init(management_command_parser *parser) {
+    printf("Initializing management command parser\n");
     if (parser == NULL) return;
     parser->state = MANAGEMENT_PARSER_VERSION;
     parser->read_args = 0;
@@ -40,6 +42,7 @@ void management_command_parser_init(management_command_parser *parser) {
 
 management_command_state management_command_parser_parse(management_command_parser *parser, struct buffer *buf){
     while (buffer_can_read(buf) && !management_command_parser_is_done(parser)) {
+        printf("Parsing management command, current state: %d\n", parser->state);
         uint8_t c = buffer_read(buf);
         parser->state = state_handlers[parser->state](parser, c);
     }
@@ -99,46 +102,65 @@ static management_command_state parse_payload_len(management_command_parser *par
         parser->status = MANAGEMENT_INVALID_LENGTH;
         return MANAGEMENT_PARSER_ERROR;
     }
+    printf("Payload length to read: %d\n", c);
     parser->to_read_len = c;
     return MANAGEMENT_PARSER_PAYLOAD;
 }
 
 static management_command_state parse_payload(management_command_parser *parser, uint8_t c) {
-    if (parser->to_read_len == 0) {
-        if (parser->read_len > 0) {
-            parser->args[parser->read_args][parser->read_len] = '\0';
-            parser->read_args++;
-        }
+    fprintf(stderr, "parse_payload: byte read: '%c' (0x%02x), to_read_len=%d, read_args=%d, read_len=%d\n",
+            (c >= 32 && c <= 126) ? c : '.', c, parser->to_read_len, parser->read_args, parser->read_len);
 
-        if (parser->read_args != command_args_count[parser->command]) {
-            parser->status = MANAGEMENT_INVALID_ARGUMENTS;
-            return MANAGEMENT_PARSER_ERROR;
-        }
-
+    if (parser->to_read_len == 0 && command_args_count[parser->command] == 0) {
         parser->status = MANAGEMENT_SUCCESS;
         return MANAGEMENT_PARSER_DONE;
     }
 
     if (c == DELIMITER) {
         if (parser->read_len == 0) {
+            fprintf(stderr, "parse_payload: ERROR, empty argument before delimiter\n");
+            parser->status = MANAGEMENT_INVALID_ARGUMENTS;
+            return MANAGEMENT_PARSER_ERROR;
+        }
+        parser->args[parser->read_args][parser->read_len] = '\0';
+        fprintf(stderr, "parse_payload: argument[%d] completed: '%s'\n", parser->read_args, parser->args[parser->read_args]);
+        parser->read_args++;
+        parser->read_len = 0;
+    } else {
+        if (parser->read_len >= (MANAGEMENT_MAX_STRING_LEN - 1)) {
+            fprintf(stderr, "parse_payload: ERROR, argument too long\n");
+            parser->status = MANAGEMENT_INVALID_ARGUMENTS;
+            return MANAGEMENT_PARSER_ERROR;
+        }
+        parser->args[parser->read_args][parser->read_len++] = c;
+    }
+
+    parser->to_read_len--;
+
+    fprintf(stderr, "parse_payload: state after processing: to_read_len=%d, read_args=%d, read_len=%d\n",
+            parser->to_read_len, parser->read_args, parser->read_len);
+
+    // **Después de consumir el byte, chequeamos si terminamos la lectura**
+    if (parser->to_read_len == 0) {
+        if (parser->read_len > 0) {
+            parser->args[parser->read_args][parser->read_len] = '\0';
+            fprintf(stderr, "parse_payload: last argument[%d] completed: '%s'\n", parser->read_args, parser->args[parser->read_args]);
+            parser->read_args++;
+            parser->read_len = 0;
+        }
+
+        if (parser->read_args != command_args_count[parser->command]) {
+            fprintf(stderr, "parse_payload: ERROR, expected %d args but got %d\n",
+                    command_args_count[parser->command], parser->read_args);
             parser->status = MANAGEMENT_INVALID_ARGUMENTS;
             return MANAGEMENT_PARSER_ERROR;
         }
 
-        parser->args[parser->read_args][parser->read_len] = '\0';
-        parser->read_args++;
-        parser->read_len = 0;
-        parser->to_read_len--;
-        return MANAGEMENT_PARSER_PAYLOAD;
+        parser->status = MANAGEMENT_SUCCESS;
+        fprintf(stderr, "parse_payload: done parsing payload successfully\n");
+        return MANAGEMENT_PARSER_DONE;
     }
 
-    if (parser->read_len >= (MANAGEMENT_MAX_STRING_LEN - 1)) {
-        parser->status = MANAGEMENT_INVALID_ARGUMENTS;
-        return MANAGEMENT_PARSER_ERROR;
-    }
-
-    parser->args[parser->read_args][parser->read_len++] = c;
-    parser->to_read_len--;
     return MANAGEMENT_PARSER_PAYLOAD;
 }
 

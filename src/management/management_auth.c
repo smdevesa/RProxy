@@ -4,13 +4,16 @@
 #include "../auth/auth.h"
 #include "../management/management.h"
 #include <sys/socket.h>
+#include <stdio.h>
 
 void management_auth_init(unsigned int state, struct selector_key *key) {
+    printf("Initializing management authentication state\n");
     management_client *data = ATTACHMENT(key);
     auth_parser_init(&data->management_parser.auth_parser);
 }
 
 unsigned management_auth_read(struct selector_key *key) {
+    printf("Initializing management authentication read\n");
     management_client *data = ATTACHMENT(key);
     struct auth_parser *p = &data->management_parser.auth_parser;
 
@@ -31,6 +34,7 @@ unsigned management_auth_read(struct selector_key *key) {
             return MANAGEMENT_ERROR;
         }
 
+        printf("Authentication done, trying to authenticate user: %s\n", p->username);
         try_to_authenticate(p);
         data->is_admin = p->is_admin;
         if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS || !auth_parser_build_response(p, &data->response_buffer)) {
@@ -47,15 +51,15 @@ unsigned management_auth_write(struct selector_key *key) {
 
     size_t write_limit;    // Maximum bytes to write in this operation
     ssize_t write_count;   // Total bytes written in this operation
-    uint8_t *write_buffer = buffer_read_ptr(&data->request_buffer, &write_limit);
+    uint8_t *write_buffer = buffer_read_ptr(&data->response_buffer, &write_limit);
 
     write_count = send(key->fd, write_buffer, write_limit, MSG_NOSIGNAL);
     if (write_count <= 0) {
         return MANAGEMENT_ERROR;
     }
 
-    buffer_read_adv(&data->request_buffer, write_count);
-    if (buffer_can_read(&data->request_buffer)) {
+    buffer_read_adv(&data->response_buffer, write_count);
+    if (buffer_can_read(&data->response_buffer)) {
         return MANAGEMENT_ERROR;
     }
 
@@ -70,5 +74,5 @@ unsigned management_auth_write(struct selector_key *key) {
     if (selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
         return MANAGEMENT_ERROR;
     }
-    return MANAGEMENT_AUTH_READ;
+    return MANAGEMENT_REQUEST_READ;
 }

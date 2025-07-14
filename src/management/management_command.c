@@ -157,27 +157,34 @@ static bool users_command_handler(struct management_command_parser *parser,
                                                  "users: invalid argument count, expected 0");
     }
 
-    char header[64];
     int user_count = users_get_count();
+
+    char header[64];
     int header_len = snprintf(header, sizeof(header), "users count: %d\n", user_count);
 
     if (!management_command_parser_build_response(parser, response_buffer,
                                                   MANAGEMENT_SUCCESS, NULL)) {
         return false;
-    }
+                                                  }
 
     size_t available;
     uint8_t *ptr = buffer_write_ptr(response_buffer, &available);
 
-    if ((size_t)header_len > available) return false;
+    if ((size_t)header_len > available) {
+        return false;
+    }
     memcpy(ptr, header, header_len);
     buffer_write_adv(response_buffer, header_len);
 
     ptr = buffer_write_ptr(response_buffer, &available);
-    size_t written = users_dump_usernames(ptr, available);
-    if (written == 0) return false;
 
+    size_t written = users_dump_usernames(ptr, available);
+
+    if (written == 0) {
+        return false;
+    }
     buffer_write_adv(response_buffer, written);
+
     return true;
 }
 
@@ -262,6 +269,7 @@ static bool management_process_command(struct management_command_parser *parser,
 }
 
 static bool stats_command_handler(struct management_command_parser *parser, struct buffer *response_buffer) {
+    printf("Calling stats command handler\n");
     if (parser->read_args != 0) {
         return management_command_parser_build_response(parser, response_buffer,
                                                  MANAGEMENT_INVALID_ARGUMENTS,
@@ -269,6 +277,7 @@ static bool stats_command_handler(struct management_command_parser *parser, stru
     }
 
     metrics_data_t metrics_data;
+    printf("About to get metrics data\n");
     get_metrics_data(&metrics_data);
 
     char response[256];
