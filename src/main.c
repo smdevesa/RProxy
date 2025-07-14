@@ -17,6 +17,7 @@
 #include "users.h"
 #include "management/management.h"
 #include "metrics/metrics.h"
+#include "config.h"
 
 
 #define MAX_CLIENTS  FD_SETSIZE
@@ -55,10 +56,15 @@ int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0); // Desactivar buffering de stdout
     setvbuf(stderr, NULL, _IONBF, 0); // Desactivar buffering de stderr
     close(STDIN_FILENO);                    // Cerrar stdin para evitar bloqueos
+    signal(SIGPIPE, SIG_IGN);               // Ignorar señales SIGPIPE para evitar cierres inesperados
 
     printf("BIENVENIDOS AL SERVIDOR RPROXY\n");
-
     printf("Usuario por defecto creado: %s\n", DEFAULT_ADMIN_USERNAME);
+
+    if(!config_init()) {
+        fprintf(stderr, "Error al inicializar la configuración\n");
+        exit(1);
+    }
 
     // Creacion del selector
     selector_status ss = SELECTOR_SUCCESS;
@@ -189,6 +195,7 @@ int main(int argc, char *argv[]) {
     if(selector != NULL) {
         selector_destroy(selector);
     }
+    config_cleanup();
     selector_close();
     printf("Servidor SOCKS5 cerrado.\n");
     return 0;
