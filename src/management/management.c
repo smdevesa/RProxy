@@ -53,13 +53,13 @@ static struct fd_handler management_v1_handler = {
 };
 
 static void management_v1_close(struct selector_key *key) {
-    struct state_machine *stm = &ATTACHMENT(key)->sm;
+    struct state_machine *stm = &ATTACHMENT_MANAGEMENT(key)->sm;
     stm_handler_close(stm, key);
     management_v1_close_connection(key);
 }
 
 static void management_v1_read(struct selector_key *key) {
-    struct state_machine *stm = &ATTACHMENT(key)->sm;
+    struct state_machine *stm = &ATTACHMENT_MANAGEMENT(key)->sm;
     management_state state = stm_handler_read(stm, key);
     if(state == MANAGEMENT_CLOSED || state == MANAGEMENT_ERROR) {
         management_v1_close_connection(key);
@@ -67,7 +67,7 @@ static void management_v1_read(struct selector_key *key) {
 }
 
 static void management_v1_write(struct selector_key *key) {
-    struct state_machine *stm = &ATTACHMENT(key)->sm;
+    struct state_machine *stm = &ATTACHMENT_MANAGEMENT(key)->sm;
     management_state state = stm_handler_write(stm, key);
     if(state == MANAGEMENT_CLOSED || state == MANAGEMENT_ERROR) {
         management_v1_close_connection(key);
@@ -75,7 +75,7 @@ static void management_v1_write(struct selector_key *key) {
 }
 
 static void management_v1_block(struct selector_key *key) {
-    struct state_machine *stm = &ATTACHMENT(key)->sm;
+    struct state_machine *stm = &ATTACHMENT_MANAGEMENT(key)->sm;
     management_state state = stm_handler_block(stm, key);
     if(state == MANAGEMENT_CLOSED || state == MANAGEMENT_ERROR) {
         management_v1_close_connection(key);
@@ -125,7 +125,7 @@ void management_v1_passive_accept(struct selector_key *key) {
 }
 
 static void management_v1_close_connection(struct selector_key *key) {
-    management_client *client = ATTACHMENT(key);
+    management_client *client = ATTACHMENT_MANAGEMENT(key);
     if (client->closed) {
         return; // Already closed
     }

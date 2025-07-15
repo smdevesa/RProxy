@@ -7,12 +7,12 @@
 #include <stdio.h>
 
 void management_auth_init(unsigned int state, struct selector_key *key) {
-    management_client *data = ATTACHMENT(key);
+    management_client *data = ATTACHMENT_MANAGEMENT(key);
     auth_parser_init(&data->management_parser.auth_parser);
 }
 
 unsigned management_auth_read(struct selector_key *key) {
-    management_client *data = ATTACHMENT(key);
+    management_client *data = ATTACHMENT_MANAGEMENT(key);
     struct auth_parser *p = &data->management_parser.auth_parser;
 
     size_t read_limit;      // Maximum bytes to read in this operation
@@ -44,7 +44,7 @@ unsigned management_auth_read(struct selector_key *key) {
 }
 
 unsigned management_auth_write(struct selector_key *key) {
-    management_client *data = ATTACHMENT(key);
+    management_client *data = ATTACHMENT_MANAGEMENT(key);
 
     size_t write_limit;    // Maximum bytes to write in this operation
     ssize_t write_count;   // Total bytes written in this operation

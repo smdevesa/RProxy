@@ -31,7 +31,7 @@ static management_command_handler command_handlers[] = {
     (management_command_handler) stats_command_handler,
     (management_command_handler) change_role_command_handler,
     (management_command_handler) set_default_auth_method_command_handler,
-    (management_command_handler) get_default_auth_method_command_handler
+    (management_command_handler) get_default_auth_method_command_handler,
     (management_command_handler) view_activity_log_command_handler
 };
 
@@ -48,12 +48,12 @@ static bool needs_admin_privileges[] = {
 };
 
 void management_command_read_init(unsigned state, struct selector_key *key) {
-    struct management_client *data = ATTACHMENT(key);
+    struct management_client *data = ATTACHMENT_MANAGEMENT(key);
     management_command_parser_init(&data->management_parser.request_parser);
 }
 
 unsigned management_command_read(struct selector_key *key) {
-    struct management_client *data = ATTACHMENT(key);
+    struct management_client *data = ATTACHMENT_MANAGEMENT(key);
 
     size_t read_limit;
     ssize_t read_count;
@@ -86,7 +86,7 @@ unsigned management_command_read(struct selector_key *key) {
 }
 
 unsigned management_command_write(struct selector_key *key) {
-    struct management_client *data = ATTACHMENT(key);
+    struct management_client *data = ATTACHMENT_MANAGEMENT(key);
 
     size_t write_limit;
     ssize_t write_count;

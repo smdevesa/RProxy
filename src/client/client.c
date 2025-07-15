@@ -15,14 +15,34 @@ static void print_version() {
 }
 
 static void print_command_info() {
+    // Calcular el ancho máximo de name + args_expected
+    size_t max_width = 0;
+    for (size_t i = 0; i < COMMANDS_COUNT; ++i) {
+        size_t len = strlen(commands[i].name);
+        if (commands[i].args_expected) {
+            len += 1 + strlen(commands[i].args_expected); // espacio + args
+        }
+        if (len > max_width) {
+            max_width = len;
+        }
+    }
+
     printf("Available commands:\n");
     for (size_t i = 0; i < COMMANDS_COUNT; ++i) {
-        printf("  %-25s %d args %s\n",
-               commands[i].name,
-               commands[i].argc_expected,
+        char combined[256];
+        if (commands[i].args_expected) {
+            snprintf(combined, sizeof(combined), "%s %s", commands[i].name, commands[i].args_expected);
+        } else {
+            snprintf(combined, sizeof(combined), "%s", commands[i].name);
+        }
+
+        printf("  %-*s %s\n",
+               (int)max_width,
+               combined,
                commands[i].needs_admin ? "(admin only)" : "");
     }
 }
+
 
 static void print_help(char * name) {
     printf("Usage: %s <host> <port> <username> <password> COMMAND [args]\n", name);
@@ -55,7 +75,7 @@ int main(int argc, char *argv[]) {
     }
 
     int args_provided = argc - 6;
-    if (args_provided < info->argc_expected) {
+    if (args_provided != info->argc_expected) {
         fprintf(stderr, "Command '%s' expects %d arguments, got %d\n",
                 info->name, info->argc_expected, args_provided);
         return EXIT_FAILURE;

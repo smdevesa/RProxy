@@ -56,6 +56,8 @@ int main(int argc, char *argv[]) {
     setvbuf(stderr, NULL, _IONBF, 0); // Desactivar buffering de stderr
     close(STDIN_FILENO);                    // Cerrar stdin para evitar bloqueos
     signal(SIGPIPE, SIG_IGN);               // Ignorar señales SIGPIPE para evitar cierres inesperados
+    int mng_server = -1;
+
 
     printf("RProxy SOCKS5 Server 1.0\n");
     printf("Default admin user credentials: admin:1234\n");
@@ -133,7 +135,6 @@ int main(int argc, char *argv[]) {
 
     printf("Socks5 server listening on %s:%d\n", args.socks_addr, args.socks_port);
 
-    int mng_server = -1;
     struct sockaddr_storage mng_sock_addr;
     socklen_t mng_sock_len = sizeof(mng_sock_addr);
     memset(&mng_sock_addr, 0, sizeof(mng_sock_addr));

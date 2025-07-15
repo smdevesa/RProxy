@@ -10,17 +10,19 @@ typedef struct {
     uint8_t code;
     uint8_t argc_expected;
     uint8_t needs_admin;
+    const char * args_expected;
 } command_info_t;
 
 static const command_info_t commands[] = {
-        { "USERS",           0x00, 0, 0 },
-        { "ADD_USER",        0x01, 2, 1 },
-        { "DELETE_USER",     0x02, 1, 1 },
-        { "CHANGE_PASSWORD", 0x03, 2, 1 },
-        { "STATS",           0x04, 0, 0 },
-        { "CHANGE_ROLE",     0x05, 2, 1 },
-        {"SET_DEFAULT_AUTH_METHOD", 0x06, 1, 1 },
-        {"GET_DEFAULT_AUTH_METHOD", 0x07, 0, 1 },
+        { "USERS",           0x00, 0, 0, NULL },
+        { "ADD_USER",        0x01, 2, 1 , "<username> <password>" },
+        { "DELETE_USER",     0x02, 1, 1 , "<username>" },
+        { "CHANGE_PASSWORD", 0x03, 2, 1 , "<username> <new_password>" },
+        { "STATS",           0x04, 0, 0 , NULL },
+        { "CHANGE_ROLE",     0x05, 2, 1 , "<username> <admin|user>" },
+        {"SET_DEFAULT_AUTH_METHOD", 0x06, 1, 1 , "<no_auth|username_password>" },
+        {"GET_DEFAULT_AUTH_METHOD", 0x07, 0, 1 , NULL },
+        { "VIEW_ACTIVITY_LOG", 0x08, 1, 1, "<username>" },
 };
 
 #define COMMANDS_COUNT (sizeof(commands) / sizeof(commands[0]))

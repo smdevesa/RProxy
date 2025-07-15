@@ -29,7 +29,7 @@
 #include "../selector.h"
 #include "../stm.h"
 
-#define ATTACHMENT(key) ((struct management_client *)((key)->data))
+#define ATTACHMENT_MANAGEMENT(key) ((struct management_client *)((key)->data))
 
 #define REQUEST_BUFFER_SIZE 512
 #define RESPONSE_BUFFER_SIZE 8196

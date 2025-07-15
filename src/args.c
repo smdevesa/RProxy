@@ -117,9 +117,9 @@ parse_args(const int argc, char** argv, struct socks5args* args)
             args->mng_port = port(optarg);
             break;
         case 'u':
-            if (nusers >= MAX_USERS)
+            if (nusers >= MAX_USERS_ARGS)
             {
-                fprintf(stderr, "maximun number of command line users reached: %d.\n", MAX_USERS);
+                fprintf(stderr, "maximun number of command line users reached: %d.\n", MAX_USERS_ARGS);
                 exit(1);
             }
             else
