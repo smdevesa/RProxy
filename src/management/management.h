@@ -64,6 +64,11 @@ typedef struct management_client {
 
 } management_client;
 
+
+/**
+ * Accepts a management connection.
+ */
+
 void management_v1_passive_accept(struct selector_key *key);
 
 #endif //MANAGEMENT_H

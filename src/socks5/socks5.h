@@ -56,8 +56,24 @@ enum socks5_state {
     ERROR
 };
 
+/**
+ * closes the connection and cleans up resources
+ * @param key the selector key containing the client data
+ */
 void close_connection(struct selector_key *key);
+
+/**
+ * Handles the passive accept for SOCKS5 connections.
+ * @param key The selector key containing the client data.
+ */
 void socks_v5_passive_accept(struct selector_key *key);
+
+/**
+ * aux function to handle the connection process
+ * @param key The selector key containing the client data.
+ * @param origin_fd The file descriptor of the origin server.
+ * @param data The client data structure containing the connection information.
+ */
 selector_status register_origin_selector(struct selector_key *key, int origin_fd, struct client_data *data);
 
 #endif //RPROXY_SOCKS5_H

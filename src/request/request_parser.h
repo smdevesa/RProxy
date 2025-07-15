@@ -57,10 +57,47 @@ typedef struct request_parser {
     uint8_t bytes_read;                   // Internal counter for parsing
 } request_parser_t;
 
+
+/**
+ * Initializes the request parser.
+ *
+ * @param parser Pointer to the request parser to initialize.
+ */
 void request_parser_init(request_parser_t *parser);
+
+/**
+ * Parses the given byte array as part of the request process.
+ *
+ * @param parser Pointer to the request parser.
+ * @param b Pointer to the buffer containing the data to parse.
+ * @return The current state of the parser after processing the data.
+ */
 request_parser_state request_parser_consume(request_parser_t *parser, struct buffer *b);
+
+/**
+ * Checks if the parser has completed the request process.
+ *
+ * @param parser Pointer to the request parser.
+ * @return true if the parser has finished, false otherwise.
+ */
 bool request_parser_is_done(const request_parser_t *parser);
+
+/**
+ * Checks if an error occurred during parsing.
+ *
+ * @param parser Pointer to the request parser.
+ * @return true if an error occurred, false otherwise.
+ */
 bool request_parser_has_error(const request_parser_t *parser);
+
+/**
+ * Builds a response based on the parser's state and reply code.
+ *
+ * @param parser Pointer to the request parser.
+ * @param buf Pointer to the buffer where the response will be written.
+ * @param reply_code The status code to include in the response.
+ * @return true if the response was successfully built, false otherwise.
+ */
 bool request_build_response(const request_parser_t *parser, struct buffer *buf, request_reply reply_code);
 
 #endif //REQUEST_PARSER_H
