@@ -1,5 +1,8 @@
 #include "users.h"
+
+#include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 static struct user_t users[MAX_USERS];
 static int user_count;
@@ -78,6 +81,8 @@ bool create_user(const char *username, const char *password, bool is_admin){
     strncpy(new_user.pass, password, MAX_PASSWORD_LENGTH);
     new_user.pass[MAX_PASSWORD_LENGTH] = '\0'; // Asegurar terminación nula
     new_user.is_admin = is_admin;
+    new_user.access_log_count = 0; // Inicializar contador de logs
+    new_user.current_access_log_index = 0; // Inicializar índice de logs
 
     //Agregar el usuario al array
     users[user_count] = new_user;
@@ -191,3 +196,47 @@ bool change_user_role(const char *username, bool is_admin) {
     users[user_idx].is_admin = is_admin;
     return true;
 }
+
+bool register_user_access(const char *username, const char *ip_or_site) {
+    int user_idx = find_user(username);
+    if (user_idx == -1) {
+        return false;  // Usuario no encontrado
+    }
+
+    struct user_t *user = &users[user_idx];
+    if (user->access_log_count >= MAX_ACCESS_LOGS) {
+        // Si el log está lleno, sobrescribir el más antiguo
+        user->current_access_log_index = (user->current_access_log_index + 1) % MAX_ACCESS_LOGS;
+    } else {
+        user->access_log_count++;
+    }
+
+
+    struct access_log_t *log = &user->access_logs[user->current_access_log_index];
+    strncpy(log->ip_or_site, ip_or_site, MAX_IP_OR_SITE_LENGTH - 1);
+    log->ip_or_site[MAX_IP_OR_SITE_LENGTH - 1] = '\0';
+    log->timestamp = time(NULL); // Registrar tiempo actual
+    user->current_access_log_index = (user->current_access_log_index + 1) % MAX_ACCESS_LOGS;
+    return true;
+}
+
+size_t get_user_access_history(const char *username, struct access_log_t *logs, size_t max_logs) {
+    int user_idx = find_user(username);
+    if (user_idx == -1) {
+        return 0;
+    }
+
+    struct user_t *user = &users[user_idx];
+    size_t count = user->access_log_count < max_logs ? user->access_log_count : max_logs;
+
+    // Calcular el índice del log más antiguo
+    size_t start_idx = (user->current_access_log_index + MAX_ACCESS_LOGS - user->access_log_count) % MAX_ACCESS_LOGS;
+
+    for (size_t i = 0; i < count; i++) {
+        size_t idx = (start_idx + i) % MAX_ACCESS_LOGS;
+        logs[i] = user->access_logs[idx];
+    }
+
+    return count;
+}
+

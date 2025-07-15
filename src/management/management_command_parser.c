@@ -21,7 +21,8 @@ static const uint8_t command_args_count[] = {
         0,  /* MANAGEMENT_COMMAND_STATS */
         2,  /* MANAGEMENT_COMMAND_CHANGE_ROLE */
         1,  /* MANAGEMENT_COMMAND_SET_DEFAULT_AUTH_METHOD */
-        0   /* MANAGEMENT_COMMAND_GET_DEFAULT_AUTH_METHOD */
+        0,   /* MANAGEMENT_COMMAND_GET_DEFAULT_AUTH_METHOD */
+        1    /* MANAGEMENT_COMMAND_VIEW_ACTIVITY_LOG */
 };
 
 static state_handler state_handlers[] = {
