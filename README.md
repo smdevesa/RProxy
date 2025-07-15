@@ -7,7 +7,7 @@ El cliente de monitoreo permite solicitar estadísticas como así también manej
 
 ## Compilación
 
-La compilación del proyecto se realiza mediante un `Makefile` ubicado en la raíz del repositorio.
+La compilación del proyecto se realiza mediante un `Makefile` ubicado en la raíz del proyecto (al mismo nivel que `src`.
 
 ### Comandos disponibles
 
