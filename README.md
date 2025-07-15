@@ -50,6 +50,6 @@ Hacer `./bin/client -h` para ver todos los comandos disponibles.
 
 ## Más detalles
 
-Para conocer más acerca de las implementaciones consultar el archivo pdf dentro de la carpeta `doc/`.
+Para conocer más acerca de las implementaciones consultar el archivo pdf dentro de la carpeta `docs/`.
 
 
