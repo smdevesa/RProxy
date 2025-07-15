@@ -30,6 +30,7 @@ struct  client_data {
     struct buffer client_buffer;
     struct buffer origin_buffer;
     struct addrinfo * origin_addrinfo; // Used for DNS resolution
+    struct addrinfo * current_addrinfo; // Current address being tried
     uint8_t client_buffer_data[BUFFER_SIZE];
     uint8_t origin_buffer_data[BUFFER_SIZE];
     fd_selector selector;
