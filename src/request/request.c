@@ -12,6 +12,8 @@
 #include <string.h>
 #include <errno.h>
 #include <netdb.h>
+#include "../metrics/metrics.h"
+#include <arpa/inet.h>
 
 static unsigned analyze_request(struct selector_key *key);
 static unsigned start_connection(struct selector_key *key);
@@ -190,6 +192,36 @@ static unsigned start_connection(struct selector_key *key) {
         }
 
         int ret = connect(fd, rp->ai_addr, rp->ai_addrlen);
+        if (data->username[0] != '\0'){
+            char ip_str[INET6_ADDRSTRLEN]; // Buffer suficientemente grande para IPv4 o IPv6
+
+            // Convertir la dirección IP a string dependiendo de la familia
+            if (data->origin_addrinfo->ai_family == AF_INET) {
+                // IPv4
+                struct sockaddr_in *addr = (struct sockaddr_in*)data->origin_addrinfo->ai_addr;
+                inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
+
+                // Añadir el puerto para más detalle
+                char full_addr[INET6_ADDRSTRLEN + 8]; // Extra para el puerto
+                snprintf(full_addr, sizeof(full_addr), "%s:%d", ip_str, ntohs(addr->sin_port));
+
+                if (!data->access_registered) {
+                    register_user_access(data->username, full_addr);
+                    data->access_registered = true;
+                }                } else if (data->origin_addrinfo->ai_family == AF_INET6) {
+                    // IPv6
+                    struct sockaddr_in6 *addr = (struct sockaddr_in6*)data->origin_addrinfo->ai_addr;
+                    inet_ntop(AF_INET6, &(addr->sin6_addr), ip_str, INET6_ADDRSTRLEN);
+
+                    // Añadir el puerto para IPv6
+                    char full_addr[INET6_ADDRSTRLEN + 8];
+                    snprintf(full_addr, sizeof(full_addr), "[%s]:%d", ip_str, ntohs(addr->sin6_port));
+                    if (!data->access_registered) {
+                        register_user_access(data->username, full_addr);
+                        data->access_registered = true;
+                    }
+                }
+        }
         if (ret == 0) {
             data->origin_fd = fd;
             data->current_addrinfo = rp;
@@ -237,5 +269,11 @@ unsigned request_dns(struct selector_key *key) {
     data->origin_addrinfo = data->dns_req.ar_result;
     data->current_addrinfo = data->origin_addrinfo;
     data->resolution_from_getaddrinfo = true;
+
+    if (!data->access_registered && data->username[0] != '\0') {
+        register_user_access(data->username, data->dns_host);
+        data->access_registered = true;
+    }
+    metrics_register_dns_request();
     return start_connection(key);
 }
