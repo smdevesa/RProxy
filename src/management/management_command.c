@@ -7,6 +7,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/socket.h>
+#include "../config.h"
 
 static bool management_process_command(struct management_command_parser *parser, struct buffer * buffer, bool is_admin);
 
@@ -18,6 +19,8 @@ static bool delete_users_command_handler(struct management_command_parser *parse
 static bool change_password_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
 static bool stats_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
 static bool change_role_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
+static bool set_default_auth_method_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
+static bool get_default_auth_method_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
 static bool view_activity_log_command_handler(struct management_command_parser *parser, struct buffer *response_buffer);
 
 static management_command_handler command_handlers[] = {
@@ -27,6 +30,8 @@ static management_command_handler command_handlers[] = {
     (management_command_handler) change_password_command_handler,
     (management_command_handler) stats_command_handler,
     (management_command_handler) change_role_command_handler,
+    (management_command_handler) set_default_auth_method_command_handler,
+    (management_command_handler) get_default_auth_method_command_handler
     (management_command_handler) view_activity_log_command_handler
 };
 
@@ -36,7 +41,9 @@ static bool needs_admin_privileges[] = {
     true,  // MANAGEMENT_COMMAND_DELETE_USERS
     true,  // MANAGEMENT_COMMAND_CHANGE_PASSWORD
     false, // MANAGEMENT_COMMAND_STATS
-    true,   // MANAGEMENT_COMMAND_CHANGE_ROLE
+    true,  // MANAGEMENT_COMMAND_CHANGE_ROLE
+    true,  // MANAGEMENT_COMMAND_SET_DEFAULT_AUTH_METHOD
+    true,   // MANAGEMENT_COMMAND_GET_DEFAULT_AUTH_METHOD
     true   // MANAGEMENT_COMMAND_VIEW_ACTIVITY_LOG
 };
 
@@ -271,6 +278,81 @@ static bool management_process_command(struct management_command_parser *parser,
         return command_handlers[parser->command](parser, resp);
     }
 }
+
+static bool set_default_auth_method_command_handler(struct management_command_parser *parser,
+                                                    struct buffer *response_buffer) {
+    if (parser->read_args != 1) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "set_default_auth_method: invalid argument count, expected 1");
+    }
+
+    const char *method_str = (const char *)parser->args[0];
+    enum auth_methods method;
+
+    if (strcmp(method_str, "no_auth") == 0) {
+        method = NO_AUTH;
+    } else if (strcmp(method_str, "username_password") == 0) {
+        method = USER_PASS;
+    } else {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "set_default_auth_method: invalid method, expected 'no_auth' or 'username_password'");
+    }
+
+    if (!set_default_auth_method(method)) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                             MANAGEMENT_SERVER_ERROR,
+                                             "set_default_auth_method: failed to set default auth method");
+    }
+
+    return management_command_parser_build_response(parser, response_buffer,
+                                             MANAGEMENT_SUCCESS,
+                                             "set_default_auth_method: default auth method set successfully");
+}
+
+static bool get_default_auth_method_command_handler(struct management_command_parser *parser,
+                                                    struct buffer *response_buffer) {
+    if (parser->read_args != 0) {
+        return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_INVALID_ARGUMENTS,
+                                                 "get_default_auth_method: invalid argument count, expected 0");
+    }
+
+    enum auth_methods method = get_default_auth_method();
+    const char *method_str;
+
+    switch (method) {
+        case NO_AUTH:
+            method_str = "no_auth";
+            break;
+        case USER_PASS:
+            method_str = "username_password";
+            break;
+        default:
+            return management_command_parser_build_response(parser, response_buffer,
+                                                 MANAGEMENT_SERVER_ERROR,
+                                                 "get_default_auth_method: unknown auth method");
+    }
+
+    char response[64];
+    int response_len = snprintf(response, sizeof(response), "Default auth method: %s\n", method_str);
+
+    if (!management_command_parser_build_response(parser, response_buffer,
+                                                  MANAGEMENT_SUCCESS, NULL)) {
+        return false;
+    }
+
+    size_t available;
+    uint8_t *ptr = buffer_write_ptr(response_buffer, &available);
+    if ((size_t)response_len > available) return false;
+
+    memcpy(ptr, response, response_len);
+    buffer_write_adv(response_buffer, response_len);
+
+    return true;
+}
+
 
 static bool stats_command_handler(struct management_command_parser *parser, struct buffer *response_buffer) {
     if (parser->read_args != 0) {

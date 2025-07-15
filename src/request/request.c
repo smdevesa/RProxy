@@ -153,7 +153,6 @@ static unsigned analyze_request(struct selector_key *key) {
         return start_connection(key);
     }
     if (parser->address_type == ADDRESS_TYPE_DOMAIN){
-        printf(">> ATYP_DOMAIN: checking domain\n");
         if (parser->dst_addr_length == 0 || parser->dst_addr_length > 255) {
             request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
             if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
@@ -277,10 +276,8 @@ unsigned request_dns(struct selector_key *key) {
     struct client_data *data = ATTACHMENT(key);
 
     if (data->dns_req.ar_result == NULL) {
-        fprintf(stderr, ">> request_dns: ar_result NULL\n");
         return REQUEST_DNS;
     }
-    fprintf(stderr, ">> request_dns: got result, copying...\n");
 
     data->origin_addrinfo = data->dns_req.ar_result;
     data->dns_req.ar_result = NULL;

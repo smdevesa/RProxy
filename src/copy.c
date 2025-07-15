@@ -179,5 +179,4 @@ static unsigned write_from_origin(struct selector_key *key, struct client_data *
 }
 
 void copy_close(unsigned int state, struct selector_key *key) {
-    printf("closing copy...\n");
 }
