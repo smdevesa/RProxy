@@ -48,8 +48,10 @@ unsigned request_read(struct selector_key *key) {
             return analyze_request(key);
         }
         request_build_response(parser, &data->origin_buffer, REQUEST_REPLY_FAILURE);
-        selector_set_interest_key(key, OP_WRITE);
-        return REQUEST_WRITE;
+        if (selector_set_interest_key(key, OP_WRITE) != SELECTOR_SUCCESS) {
+            perror("selector_set_interest");
+            return ERROR;
+        }        return REQUEST_WRITE;
     }
     return REQUEST_READ;
 }
@@ -71,10 +73,9 @@ unsigned request_write(struct selector_key *key) {
         return REQUEST_WRITE;
     }
 
-    if (request_parser_has_error(&data->client.request_parser)) {
+    if (request_parser_has_error(&data->client.request_parser) || selector_set_interest_key(key, OP_READ) != SELECTOR_SUCCESS) {
         return ERROR;
     }
-    selector_set_interest_key(key, OP_READ);
     return COPY;
 }
 
