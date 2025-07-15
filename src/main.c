@@ -91,6 +91,21 @@ int main(int argc, char *argv[]) {
 
     struct socks5args args;
     parse_args(argc, argv, &args);
+
+    for (int i = 0; i < MAX_USERS_ARGS; i++) {
+        if (args.users[i].name != NULL && args.users[i].pass != NULL) {
+            // Añadir el usuario al sistema
+            if (!create_user(args.users[i].name, args.users[i].pass, false)) {
+                fprintf(stderr, "Error al añadir usuario %s\n", args.users[i].name);
+            } else {
+                printf("Usuario añadido: %s\n", args.users[i].name);
+            }
+        } else {
+            // No hay más usuarios
+            break;
+        }
+    }
+
     struct sockaddr_storage aux;
     memset(&aux, 0, sizeof(aux));
     socklen_t aux_len = sizeof(aux);
