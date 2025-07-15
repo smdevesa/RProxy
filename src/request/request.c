@@ -14,6 +14,7 @@
 
 #include "dns_resolver.h"
 #include "../users.h"
+#include "../metrics/metrics.h"
 
 
 static unsigned analyze_request(struct selector_key *key);
@@ -287,5 +288,6 @@ unsigned request_dns(struct selector_key *key) {
         register_user_access(data->username, data->dns_host);
         data->access_registered = true;
     }
+    metrics_register_dns_request();
     return start_connection(key);
 }

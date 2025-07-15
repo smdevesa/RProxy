@@ -2,10 +2,13 @@
 
 #include <string.h>
 
+
 static metrics_data_t data;
+
 
 void metrics_init() {
     memset(&data, 0, sizeof(metrics_data_t));
+    data.server_start_time = time(NULL);
 }
 
 void metrics_register_new_connection() {
@@ -28,4 +31,12 @@ void get_metrics_data(metrics_data_t *m_data) {
     if (m_data != NULL) {
         memcpy(m_data, &data, sizeof(metrics_data_t));
     }
+}
+
+time_t metrics_get_server_uptime() {
+    return time(NULL) - data.server_start_time;
+}
+
+void metrics_register_dns_request() {
+    data.dns_queries++;
 }

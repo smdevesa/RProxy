@@ -364,16 +364,31 @@ static bool stats_command_handler(struct management_command_parser *parser, stru
     metrics_data_t metrics_data;
     get_metrics_data(&metrics_data);
 
-    char response[256];
+    // Obtener el tiempo de actividad del servidor en segundos
+    time_t uptime = metrics_get_server_uptime();
+
+    // Convertir segundos a un formato más legible
+    int days = uptime / (24 * 3600);
+    uptime = uptime % (24 * 3600);
+    int hours = uptime / 3600;
+    uptime = uptime % 3600;
+    int minutes = uptime / 60;
+    int seconds = uptime % 60;
+
+    char response[384]; // Aumenté el tamaño para incluir la información de uptime
     int response_len = snprintf(response, sizeof(response),
                                 "Current connections: %zu\n"
                                 "Total connections: %zu\n"
                                 "Bytes sent: %zu\n"
-                                "Bytes received: %zu\n",
+                                "Bytes received: %zu\n"
+                                "DNS requests: %zu\n"
+                                "Server uptime: %d days, %d hours, %d minutes, %d seconds\n",
                                 metrics_data.current_connections,
                                 metrics_data.total_connections,
                                 metrics_data.bytes_sent,
-                                metrics_data.bytes_received);
+                                metrics_data.bytes_received,
+                                metrics_data.dns_queries,
+                                days, hours, minutes, seconds);
 
     if (!management_command_parser_build_response(parser, response_buffer,
                                                   MANAGEMENT_SUCCESS, NULL)) {
